@@ -55,7 +55,7 @@ class HouseDetails : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        ui.lstRooms.adapter?.notifyDataSetChanged()
+        loadRooms(houseId)
     }
 
     private fun openRoomDetails(position: Int) {
