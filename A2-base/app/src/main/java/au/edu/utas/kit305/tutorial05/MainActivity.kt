@@ -21,6 +21,7 @@ import com.google.firebase.ktx.Firebase
 const val FIREBASE_TAG = "FirebaseLogging"
 const val HOUSE_INDEX = "House_Index"
 const val MOVIE_INDEX = "Movie_Index"
+const val HOUSE_NAME_EXTRA = "house_name"
 val items = mutableListOf<Movie>()
 val houses = mutableListOf<House>()
 
@@ -195,6 +196,8 @@ class MainActivity : AppCompatActivity() {
                     1 -> {
                         val i = Intent(this, HouseDetails::class.java)
                         i.putExtra(HOUSE_INDEX, position)
+                        i.putExtra(HOUSE_ID_EXTRA, houses[position].id)
+                        i.putExtra(HOUSE_NAME_EXTRA, houses[position].customerName ?: "House")
                         startActivity(i)
                     }
                 }
