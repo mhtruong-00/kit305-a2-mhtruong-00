@@ -7,4 +7,3 @@ class House(
     var customerName: String? = null,
     var address: String? = null
 )
-

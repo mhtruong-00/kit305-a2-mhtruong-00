@@ -1,6 +1,7 @@
 package au.edu.utas.kit305.tutorial05
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -14,6 +15,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
 import com.google.firebase.ktx.Firebase
 const val FIREBASE_TAG = "FirebaseLogging"
+const val HOUSE_INDEX = "House_Index"
 const val MOVIE_INDEX = "Movie_Index"
 val items = mutableListOf<Movie>()
 val houses = mutableListOf<House>()
@@ -87,6 +89,12 @@ class MainActivity : AppCompatActivity()
             val house = houseList[position]
             holder.ui.txtName.text = house.customerName ?: "Unnamed customer"
             holder.ui.txtYear.text = house.address ?: "No address"
+
+            holder.ui.root.setOnClickListener {
+                val i = Intent(holder.ui.root.context, au.edu.utas.kit305.tutorial05.HouseDetails::class.java)
+                i.putExtra(HOUSE_INDEX, position)
+                startActivity(i)
+            }
         }
     }
 }
