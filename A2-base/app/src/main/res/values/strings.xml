@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Android Tutorial 5</string>
+    <string name="error_house_required_fields">Customer name and address are required</string>
+    <string name="error_house_save_failed">Could not save house</string>
+    <string name="room_count_format">%1$d Rooms</string>
+    <string name="label_room">Room</string>
 </resources>

@@ -70,7 +70,9 @@ class MainActivity : AppCompatActivity()
 
     override fun onResume() {
         super.onResume()
-        ui.myList.adapter?.notifyDataSetChanged()
+        if (houses.isNotEmpty()) {
+            ui.myList.adapter?.notifyItemRangeChanged(0, houses.size)
+        }
     }
     inner class HouseHolder(var ui: MyListItemBinding) : RecyclerView.ViewHolder(ui.root) {}
 

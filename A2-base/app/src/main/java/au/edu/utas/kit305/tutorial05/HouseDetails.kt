@@ -67,9 +67,13 @@ class HouseDetails : AppCompatActivity() {
     }
 
     private fun loadRooms(houseId: String?) {
+        val adapter = ui.lstRooms.adapter as RoomAdapter
         if (houseId.isNullOrBlank()) {
+            val previousCount = roomList.size
             roomList.clear()
-            ui.lstRooms.adapter?.notifyDataSetChanged()
+            if (previousCount > 0) {
+                adapter.notifyItemRangeRemoved(0, previousCount)
+            }
             ui.lblRoomCount.text = "0 Rooms"
             return
         }
@@ -78,13 +82,20 @@ class HouseDetails : AppCompatActivity() {
             .whereEqualTo("houseId", houseId)
             .get()
             .addOnSuccessListener { result ->
+                val previousCount = roomList.size
                 roomList.clear()
                 for (document in result) {
                     val room = document.toObject<Room>()
                     room.id = document.id
                     roomList.add(room)
                 }
-                ui.lstRooms.adapter?.notifyDataSetChanged()
+
+                if (previousCount > 0) {
+                    adapter.notifyItemRangeRemoved(0, previousCount)
+                }
+                if (roomList.isNotEmpty()) {
+                    adapter.notifyItemRangeInserted(0, roomList.size)
+                }
                 ui.lblRoomCount.text = "${roomList.size} Rooms"
             }
             .addOnFailureListener {
