@@ -53,29 +53,23 @@
 
 ### Feature 4 — Products: Selection (10 pts) ✅ DONE 2026-04-11
 - **API URL:** `https://utasbot.dev/kit305_2026/product?category=window|floor`
-- `Product.kt` data class with `@SerializedName` field mappings
-- `ProductApiService.kt` Retrofit interface (`GET /product`, `GET /product?category=`, `GET /product/:id`)
-- `RetrofitClient.kt` singleton (OkHttp + Gson + logging interceptor)
-- `Window.kt` updated → added `selectedProductId`, `selectedProductName`, `panelCount`
-- `FloorSpace.kt` updated → added `selectedProductId`, `selectedProductName`
-- `product_list_item.xml` — image (Glide), name, description, price, constraint info
-- `activity_product_list.xml` — title, space info banner, loading spinner, product list
-- `measurement_list_item.xml` — name, dims, current product label, Edit / Delete / **Select Product** buttons
-- `ProductListActivity.kt` — fetches API by category, shows list, returns selected product via `ActivityResultLauncher`
-- `RoomDetails.kt` rewritten — two `ActivityResultLauncher`s (window + floor), saves product ID/name/panelCount to Firestore
-- `INTERNET` permission added to `AndroidManifest.xml`
-- New dependencies: Retrofit 2.9, OkHttp 4.12, Gson converter, Glide 4.16, Firebase Storage
-- API parsing fixed to match real response format: `{ "data": [...] }`
-- Product IDs handled as strings (e.g., `win-001`) across `Product`, `Window`, `FloorSpace`, and selection result flow
-- Product load error `Expected BEGIN_...` resolved
+- Product list is loaded from the assignment API (not from Firestore product documents)
+- `ProductListActivity.kt` fetches API data using built-in `HttpURLConnection` + `org.json` parsing
+- Supports API payload formats:
+  - `{ "data": [ ... ] }`
+  - `[ ... ]`
+- `Product.kt` uses Firebase-friendly fields and string product IDs (e.g., `win-001`)
+- `Window.kt` / `FloorSpace.kt` store selected product id + name, and window panel count
+- `measurement_list_item.xml` supports Edit / Delete / Select Product actions
+- Product selection returns to `RoomDetails` and saves selected product to Firestore
+- `INTERNET` permission is enabled in `AndroidManifest.xml`
 - UX fixes completed:
-  - Tap window/floor row now opens edit dialog
-  - Add window/floor now creates records only on **Save** (Cancel does not create)
-  - Room list refreshes after room-name edits when returning from `RoomDetails`
-- Compliance update (no non-Firebase third-party libraries):
-  - Removed Retrofit / OkHttp / Gson converter / Glide dependencies
-  - Product loading now reads from Firestore `products` collection directly
-  - Product image display currently uses built-in placeholder icon (no third-party image loader)
+  - Tap window/floor row opens edit dialog
+  - Add window/floor creates record only on **Save** (Cancel creates nothing)
+  - Room list refreshes after room-name edits on return from `RoomDetails`
+- Dependency policy update:
+  - Removed non-Firebase third-party libs: Retrofit / OkHttp / Gson converter / Glide
+  - Current external stack is Firebase + assignment API only
 
 ---
 
@@ -164,7 +158,7 @@
 When you return, say **"continue from progress notes"** and I will:
 1. Read this file
 2. Start **Feature 5 — Products: Constraints**
-3. Implement: min/max width/height checks, panel split logic, max panel count, and clear incompatibility messages (using Firestore-loaded products)
+3. Implement: min/max width/height checks, panel split logic, max panel count, and clear incompatibility messages (using API-loaded products)
 4. Continue with simple incremental commits and push after each part
 
-**Current stack policy state: Firebase-only for external libraries/services (no Retrofit/OkHttp/Gson/Glide).**
+**Current stack policy state: Firebase + assignment API only (no Retrofit/OkHttp/Gson/Glide).**
