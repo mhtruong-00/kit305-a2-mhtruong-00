@@ -170,6 +170,15 @@
             </PendingDiffInfo>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/app/src/main/res/values/themes.xml">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/app/src/main/res/values/themes.xml" />
+              <option name="originalContent" value="&lt;resources xmlns:tools=&quot;http://schemas.android.com/tools&quot;&gt;&#10;    &lt;!-- Base application theme. --&gt;&#10;    &lt;style name=&quot;Base.Theme.AndroidTutorial5&quot; parent=&quot;Theme.Material3.DayNight.NoActionBar&quot;&gt;&#10;        &lt;!-- Customize your light theme here. --&gt;&#10;        &lt;!-- &lt;item name=&quot;colorPrimary&quot;&gt;@color/my_light_primary&lt;/item&gt; --&gt;&#10;    &lt;/style&gt;&#10;&#10;    &lt;style name=&quot;Theme.AndroidTutorial5&quot; parent=&quot;Base.Theme.AndroidTutorial5&quot; /&gt;&#10;&lt;/resources&gt;" />
+              <option name="updatedContent" value="&lt;resources xmlns:tools=&quot;http://schemas.android.com/tools&quot;&gt;&#10;    &lt;!-- Base application theme. --&gt;&#10;    &lt;style name=&quot;Base.Theme.AndroidTutorial5&quot; parent=&quot;Theme.MaterialComponents.DayNight.DarkActionBar&quot;&gt;&#10;        &lt;item name=&quot;colorPrimary&quot;&gt;#1565C0&lt;/item&gt;&#10;        &lt;item name=&quot;colorPrimaryDark&quot;&gt;#003c8f&lt;/item&gt;&#10;        &lt;item name=&quot;colorAccent&quot;&gt;#FF6F00&lt;/item&gt;&#10;    &lt;/style&gt;&#10;&#10;    &lt;style name=&quot;Theme.AndroidTutorial5&quot; parent=&quot;Base.Theme.AndroidTutorial5&quot; /&gt;&#10;&lt;/resources&gt;&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

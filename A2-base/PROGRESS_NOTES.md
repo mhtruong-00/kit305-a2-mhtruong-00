@@ -48,27 +48,28 @@
 
 ---
 
-## ❌ TODO (Remaining Features)
+## ✅ COMPLETED (continued)
 
-### Feature 4 — Products: Selection (10 pts)  **← START HERE NEXT SESSION**
-**What to build:**
-- A `Product` data class (from API response)
-- A `ProductList` activity/fragment that:
-  - Fetches products from the **Product API** (URL to be confirmed — check the full assignment PDF)
-  - Filters: only show **floor** products when opened from a floor space; only **window** products from a window space
-  - Shows product details: name, description, price, image, available variants/sizes
-  - Lets user tap a product to select it for that space
-- Store selected `productId` (and variant if applicable) back in the `Window` / `FloorSpace` Firestore document
-- Update `Window` and `FloorSpace` data classes to include `selectedProductId`, `selectedVariant`, `selectedPanelCount`
-
-**Notes:**
-- The Product API is a REST API provided by the unit — find the URL in the full assignment PDF or unit MyLO page
-- Use Retrofit or OkHttp + Gson/Moshi for network calls
-- Add `INTERNET` permission to `AndroidManifest.xml`
+### Feature 4 — Products: Selection (10 pts) ✅ DONE 2026-04-11
+- **API URL:** `https://utasbot.dev/kit305_2026/product?category=window|floor`
+- `Product.kt` data class with `@SerializedName` field mappings
+- `ProductApiService.kt` Retrofit interface (`GET /product`, `GET /product?category=`, `GET /product/:id`)
+- `RetrofitClient.kt` singleton (OkHttp + Gson + logging interceptor)
+- `Window.kt` updated → added `selectedProductId`, `selectedProductName`, `panelCount`
+- `FloorSpace.kt` updated → added `selectedProductId`, `selectedProductName`
+- `product_list_item.xml` — image (Glide), name, description, price, constraint info
+- `activity_product_list.xml` — title, space info banner, loading spinner, product list
+- `measurement_list_item.xml` — name, dims, current product label, Edit / Delete / **Select Product** buttons
+- `ProductListActivity.kt` — fetches API by category, shows list, returns selected product via `ActivityResultLauncher`
+- `RoomDetails.kt` rewritten — two `ActivityResultLauncher`s (window + floor), saves product ID/name/panelCount to Firestore
+- `INTERNET` permission added to `AndroidManifest.xml`
+- New dependencies: Retrofit 2.9, OkHttp 4.12, Gson converter, Glide 4.16, Firebase Storage
 
 ---
 
-### Feature 5 — Products: Constraints (10 pts)
+## ❌ TODO (Remaining Features)
+
+### Feature 5 — Products: Constraints (10 pts)  **← START HERE NEXT SESSION**
 **Constraints to implement for WINDOW spaces only:**
 - `minHeight` / `maxHeight` — window height must be within range
 - `minWidth` / `maxWidth` — window width must be within range
@@ -150,6 +151,11 @@
 ## How to Resume
 When you return, say **"continue from progress notes"** and I will:
 1. Read this file
-2. Pick up from **Feature 4 — Products: Selection**
-3. Ask you to confirm the Product API URL if you have it
+2. Pick up from **Feature 5 — Products: Constraints**
+3. Continue making granular commits toward the 150 target
+
+**Commit count as of last session: 30 / ~150**
+
+
+
 
