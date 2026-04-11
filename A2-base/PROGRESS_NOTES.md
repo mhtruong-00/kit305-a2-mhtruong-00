@@ -24,8 +24,9 @@
 
 ### Feature 1 — House & Room Lists + Edit (10 pts)
 - `MainActivity.kt` loads all houses from Firestore, shows in RecyclerView
-- Tap house → `HouseDetails` activity (edit customer name + address, see room list)
-- `HouseDetails.kt` loads rooms for that house
+- Tap house → options dialog (**Edit House** or **Open Rooms**)
+- House edit (customer name + address) is handled in `MainActivity.kt`
+- `HouseDetails.kt` is now room-focused: loads rooms for the selected house
 - `RoomDetails.kt` opens from room tap (edit room name)
 - Count labels update after every operation
 - Long-press on house → confirm delete dialog
@@ -136,8 +137,8 @@
 ## Key Files
 | File | Purpose |
 |------|---------|
-| `MainActivity.kt` | House list, add/delete house |
-| `HouseDetails.kt` | House edit, room list, add/delete room |
+| `MainActivity.kt` | House list, add/delete house, edit house details |
+| `HouseDetails.kt` | Room list for selected house, add/delete room |
 | `RoomDetails.kt` | Room edit, window list, floor space list, add/edit/delete |
 | `House.kt` | Data class |
 | `Room.kt` | Data class |
@@ -155,7 +156,3 @@ When you return, say **"continue from progress notes"** and I will:
 3. Continue making granular commits toward the 150 target
 
 **Commit count as of last session: 30 / ~150**
-
-
-
-
