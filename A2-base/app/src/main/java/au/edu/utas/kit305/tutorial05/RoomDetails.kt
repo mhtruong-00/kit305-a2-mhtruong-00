@@ -140,10 +140,25 @@ class RoomDetails : AppCompatActivity() {
     }
 
     private fun addWindow(roomId: String) {
-        val w = Window(roomId = roomId, name = "New Window")
-        Firebase.firestore.collection("windows").add(w)
-            .addOnSuccessListener { w.id = it.id; windowList.add(0, w); lstWindows.adapter?.notifyItemInserted(0); lblWindowCount.text = "${windowList.size} Windows"; openWindowEdit(0) }
-            .addOnFailureListener { Log.e(FIREBASE_TAG, "Error adding window", it) }
+        showMeasurementDialog(
+            "Add Window",
+            "New Window",
+            "Width (mm)",
+            0,
+            "Height (mm)",
+            0
+        ) { name, d1, d2 ->
+            val w = Window(roomId = roomId, name = name, widthMm = d1, heightMm = d2)
+            Firebase.firestore.collection("windows").add(w)
+                .addOnSuccessListener {
+                    w.id = it.id
+                    windowList.add(0, w)
+                    lstWindows.adapter?.notifyItemInserted(0)
+                    lblWindowCount.text = "${windowList.size} Windows"
+                    lstWindows.scrollToPosition(0)
+                }
+                .addOnFailureListener { Log.e(FIREBASE_TAG, "Error adding window", it) }
+        }
     }
 
     private fun deleteWindow(pos: Int) {
@@ -203,10 +218,25 @@ class RoomDetails : AppCompatActivity() {
     }
 
     private fun addFloorSpace(roomId: String) {
-        val f = FloorSpace(roomId = roomId, name = "New Floor Space")
-        Firebase.firestore.collection("floorspaces").add(f)
-            .addOnSuccessListener { f.id = it.id; floorSpaceList.add(0, f); lstFloorSpaces.adapter?.notifyItemInserted(0); lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces"; openFloorSpaceEdit(0) }
-            .addOnFailureListener { Log.e(FIREBASE_TAG, "Error adding floor space", it) }
+        showMeasurementDialog(
+            "Add Floor Space",
+            "New Floor Space",
+            "Width (mm)",
+            0,
+            "Depth (mm)",
+            0
+        ) { name, d1, d2 ->
+            val f = FloorSpace(roomId = roomId, name = name, widthMm = d1, depthMm = d2)
+            Firebase.firestore.collection("floorspaces").add(f)
+                .addOnSuccessListener {
+                    f.id = it.id
+                    floorSpaceList.add(0, f)
+                    lstFloorSpaces.adapter?.notifyItemInserted(0)
+                    lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces"
+                    lstFloorSpaces.scrollToPosition(0)
+                }
+                .addOnFailureListener { Log.e(FIREBASE_TAG, "Error adding floor space", it) }
+        }
     }
 
     private fun deleteFloorSpace(pos: Int) {
