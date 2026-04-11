@@ -72,6 +72,10 @@
   - Tap window/floor row now opens edit dialog
   - Add window/floor now creates records only on **Save** (Cancel does not create)
   - Room list refreshes after room-name edits when returning from `RoomDetails`
+- Compliance update (no non-Firebase third-party libraries):
+  - Removed Retrofit / OkHttp / Gson converter / Glide dependencies
+  - Product loading now reads from Firestore `products` collection directly
+  - Product image display currently uses built-in placeholder icon (no third-party image loader)
 
 ---
 
@@ -160,7 +164,7 @@
 When you return, say **"continue from progress notes"** and I will:
 1. Read this file
 2. Start **Feature 5 — Products: Constraints**
-3. Implement: min/max width/height checks, panel split logic, max panel count, and clear incompatibility messages
+3. Implement: min/max width/height checks, panel split logic, max panel count, and clear incompatibility messages (using Firestore-loaded products)
 4. Continue with simple incremental commits and push after each part
 
-**Commit count target: ~150 (current progress is on track)**
+**Current stack policy state: Firebase-only for external libraries/services (no Retrofit/OkHttp/Gson/Glide).**
