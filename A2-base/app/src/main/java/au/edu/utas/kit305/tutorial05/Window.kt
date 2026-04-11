@@ -7,6 +7,9 @@ class Window(
     var roomId: String? = null,
     var name: String? = null,
     var widthMm: Int = 0,
-    var heightMm: Int = 0
+    var heightMm: Int = 0,
+    var selectedProductId: Int? = null,
+    var selectedProductName: String? = null,
+    var panelCount: Int = 1
 )
 
