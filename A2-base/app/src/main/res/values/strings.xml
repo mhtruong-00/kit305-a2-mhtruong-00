@@ -4,4 +4,11 @@
     <string name="error_house_save_failed">Could not save house</string>
     <string name="room_count_format">%1$d Rooms</string>
     <string name="label_room">Room</string>
+    <string name="add_house">Add House</string>
+    <string name="add_room">Add Room</string>
+    <string name="house_count_format">%1$d Houses</string>
+    <string name="delete_house_confirm">Delete this house and all its rooms?</string>
+    <string name="delete_room_confirm">Delete this room?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
 </resources>

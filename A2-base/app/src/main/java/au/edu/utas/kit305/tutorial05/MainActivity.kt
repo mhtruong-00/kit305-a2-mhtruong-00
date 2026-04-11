@@ -1,6 +1,7 @@
 package au.edu.utas.kit305.tutorial05
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -31,11 +32,12 @@ class MainActivity : AppCompatActivity()
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
 
-        ui.lblMovieCount.text = "${houses.size} Houses"
+        ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
         ui.myList.adapter = HouseAdapter(houseList = houses)
 
 //vertical list
         ui.myList.layoutManager = LinearLayoutManager(this)
+        ui.btnAddHouse.setOnClickListener { addHouse() }
 
 //get db connection
         val db = Firebase.firestore
@@ -48,23 +50,19 @@ class MainActivity : AppCompatActivity()
             .get()
             .addOnSuccessListener { result ->
                 houses.clear() //clear before reload to avoid duplicates after config changes
-                Log.d(FIREBASE_TAG, "--- all houses ---")
                 for (document in result)
                 {
-                    Log.d(FIREBASE_TAG, document.toString())
                     val house = document.toObject<House>()
                     house.id = document.id
-                    Log.d(FIREBASE_TAG, house.toString())
-
                     houses.add(house)
                 }
                 // this is fine for now while the list is simple; we will optimize with specific events later
                 ui.myList.adapter?.notifyDataSetChanged()
-                ui.lblMovieCount.text = "${houses.size} Houses"
+                ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error reading houses", it)
-                ui.lblMovieCount.text = "0 Houses"
+                ui.lblMovieCount.text = getString(R.string.house_count_format, 0)
             }
     }
 
@@ -74,6 +72,67 @@ class MainActivity : AppCompatActivity()
             ui.myList.adapter?.notifyItemRangeChanged(0, houses.size)
         }
     }
+
+    private fun addHouse() {
+        val newHouse = House(
+            customerName = "New Customer",
+            address = "New Address"
+        )
+
+        Firebase.firestore.collection("houses")
+            .add(newHouse)
+            .addOnSuccessListener {
+                newHouse.id = it.id
+                houses.add(0, newHouse)
+                ui.myList.adapter?.notifyItemInserted(0)
+                ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
+                ui.myList.scrollToPosition(0)
+            }
+            .addOnFailureListener {
+                Log.e(FIREBASE_TAG, "Error creating house", it)
+            }
+    }
+
+    private fun promptDeleteHouse(position: Int) {
+        if (position < 0 || position >= houses.size) return
+
+        AlertDialog.Builder(this)
+            .setMessage(R.string.delete_house_confirm)
+            .setPositiveButton(R.string.delete) { _, _ -> deleteHouse(position) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun deleteHouse(position: Int) {
+        val house = houses[position]
+        val houseId = house.id ?: return
+
+        val db = Firebase.firestore
+        db.collection("rooms")
+            .whereEqualTo("houseId", houseId)
+            .get()
+            .addOnSuccessListener { result ->
+                val batch = db.batch()
+                for (document in result.documents) {
+                    batch.delete(document.reference)
+                }
+                batch.delete(db.collection("houses").document(houseId))
+
+                batch.commit()
+                    .addOnSuccessListener {
+                        houses.removeAt(position)
+                        ui.myList.adapter?.notifyItemRemoved(position)
+                        ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
+                    }
+                    .addOnFailureListener {
+                        Log.e(FIREBASE_TAG, "Error deleting house and rooms", it)
+                    }
+            }
+            .addOnFailureListener {
+                Log.e(FIREBASE_TAG, "Error finding rooms for house delete", it)
+            }
+    }
+
     inner class HouseHolder(var ui: MyListItemBinding) : RecyclerView.ViewHolder(ui.root) {}
 
     inner class HouseAdapter(private val houseList: MutableList<House>) : RecyclerView.Adapter<HouseHolder>()
@@ -93,9 +152,18 @@ class MainActivity : AppCompatActivity()
             holder.ui.txtYear.text = house.address ?: "No address"
 
             holder.ui.root.setOnClickListener {
-                val i = Intent(holder.ui.root.context, au.edu.utas.kit305.tutorial05.HouseDetails::class.java)
-                i.putExtra(HOUSE_INDEX, position)
+                val currentPosition = holder.bindingAdapterPosition
+                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
+                val i = Intent(holder.ui.root.context, HouseDetails::class.java)
+                i.putExtra(HOUSE_INDEX, currentPosition)
                 startActivity(i)
+            }
+
+            holder.ui.root.setOnLongClickListener {
+                val currentPosition = holder.bindingAdapterPosition
+                if (currentPosition == RecyclerView.NO_POSITION) return@setOnLongClickListener true
+                promptDeleteHouse(currentPosition)
+                true
             }
         }
     }
