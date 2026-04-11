@@ -12,8 +12,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 const val EXTRA_PRODUCT_TYPE = "product_type"
 const val EXTRA_SPACE_WIDTH = "space_width"
@@ -64,50 +66,103 @@ class ProductListActivity : AppCompatActivity() {
             returnSelectedProduct(product)
         }
 
-        loadProductsFromFirestore()
+        loadProductsFromApi()
     }
 
-    private fun loadProductsFromFirestore() {
+    private fun loadProductsFromApi() {
         progressProducts.visibility = View.VISIBLE
         lblProductError.visibility = View.GONE
 
-        Firebase.firestore.collection("products")
-            .whereEqualTo("category", productType)
-            .get()
-            .addOnSuccessListener { result ->
-                progressProducts.visibility = View.GONE
-                products.clear()
-
-                for (doc in result.documents) {
-                    val p = Product(
-                        id = doc.getString("id") ?: doc.id,
-                        name = doc.getString("name") ?: "",
-                        description = doc.getString("description") ?: "",
-                        category = doc.getString("category") ?: "",
-                        imageUrl = doc.getString("imageUrl"),
-                        pricePerSqm = doc.getDouble("price_per_sqm") ?: (doc.getDouble("pricePerSqm") ?: 0.0),
-                        minWidth = doc.getLong("min_width")?.toInt() ?: (doc.getLong("minWidth")?.toInt() ?: 0),
-                        maxWidth = doc.getLong("max_width")?.toInt() ?: (doc.getLong("maxWidth")?.toInt() ?: 9999),
-                        minHeight = doc.getLong("min_height")?.toInt() ?: (doc.getLong("minHeight")?.toInt() ?: 0),
-                        maxHeight = doc.getLong("max_height")?.toInt() ?: (doc.getLong("maxHeight")?.toInt() ?: 9999),
-                        maxPanelCount = doc.getLong("max_panels")?.toInt() ?: (doc.getLong("maxPanelCount")?.toInt() ?: 1),
-                        variants = (doc.get("variants") as? List<*>)?.filterIsInstance<String>()
-                    )
-                    products.add(p)
+        Thread {
+            try {
+                val endpoint = "https://utasbot.dev/kit305_2026/product?category=$productType"
+                val url = URL(endpoint)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 10000
                 }
 
-                lstProducts.adapter?.notifyDataSetChanged()
-                if (products.isEmpty()) {
-                    lblProductError.text = "No $productType products found in Firestore."
+                val responseCode = conn.responseCode
+                if (responseCode !in 200..299) {
+                    runOnUiThread {
+                        progressProducts.visibility = View.GONE
+                        lblProductError.text = "Failed to load products ($responseCode)"
+                        lblProductError.visibility = View.VISIBLE
+                    }
+                    conn.disconnect()
+                    return@Thread
+                }
+
+                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
+
+                val parsedProducts = parseProducts(responseText)
+
+                runOnUiThread {
+                    progressProducts.visibility = View.GONE
+                    products.clear()
+                    products.addAll(parsedProducts)
+                    lstProducts.adapter?.notifyDataSetChanged()
+                    if (products.isEmpty()) {
+                        lblProductError.text = "No $productType products returned by API."
+                        lblProductError.visibility = View.VISIBLE
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progressProducts.visibility = View.GONE
+                    lblProductError.text = "Network error: ${e.message}"
                     lblProductError.visibility = View.VISIBLE
                 }
+                Log.e(FIREBASE_TAG, "Error loading products from API", e)
             }
-            .addOnFailureListener { e ->
-                progressProducts.visibility = View.GONE
-                lblProductError.text = "Could not load products: ${e.message}"
-                lblProductError.visibility = View.VISIBLE
-                Log.e(FIREBASE_TAG, "Error reading products from Firestore", e)
-            }
+        }.start()
+    }
+
+    private fun parseProducts(responseText: String): List<Product> {
+        val out = mutableListOf<Product>()
+
+        // Support both possible formats:
+        // 1) { "data": [ ... ] }
+        // 2) [ ... ]
+        val array: JSONArray = if (responseText.trim().startsWith("{")) {
+            val root = JSONObject(responseText)
+            root.optJSONArray("data") ?: JSONArray()
+        } else {
+            JSONArray(responseText)
+        }
+
+        for (i in 0 until array.length()) {
+            val obj = array.optJSONObject(i) ?: continue
+            out.add(
+                Product(
+                    id = obj.optString("id"),
+                    name = obj.optString("name"),
+                    description = obj.optString("description"),
+                    category = obj.optString("category"),
+                    imageUrl = obj.optString("imageUrl").ifBlank { null },
+                    pricePerSqm = obj.optDouble("price_per_sqm", 0.0),
+                    minWidth = obj.optInt("min_width", 0),
+                    maxWidth = obj.optInt("max_width", 9999),
+                    minHeight = obj.optInt("min_height", 0),
+                    maxHeight = obj.optInt("max_height", 9999),
+                    maxPanelCount = obj.optInt("max_panels", 1),
+                    variants = parseVariants(obj.optJSONArray("variants"))
+                )
+            )
+        }
+
+        return out
+    }
+
+    private fun parseVariants(variantsArray: JSONArray?): List<String> {
+        if (variantsArray == null) return emptyList()
+        val variants = mutableListOf<String>()
+        for (i in 0 until variantsArray.length()) {
+            variants.add(variantsArray.optString(i))
+        }
+        return variants
     }
 
     private fun returnSelectedProduct(product: Product) {
@@ -160,7 +215,7 @@ class ProductListActivity : AppCompatActivity() {
                 "Floor covering"
             }
 
-            // No third-party image loader: use a built-in placeholder icon.
+            // Keep a built-in placeholder icon (no third-party image loader).
             holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
 
             holder.itemView.setOnClickListener { onSelect(product) }
