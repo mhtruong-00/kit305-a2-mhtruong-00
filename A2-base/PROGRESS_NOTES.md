@@ -1,5 +1,5 @@
 # KIT305 Assignment 2/3/4 — Progress Notes
-**Last updated:** 2026-04-11  
+**Last updated:** 2026-04-11 (end of day)  
 **Project:** Android app (Kotlin + Firebase Firestore) — Window/Floor covering quote app
 
 ---
@@ -65,6 +65,13 @@
 - `RoomDetails.kt` rewritten — two `ActivityResultLauncher`s (window + floor), saves product ID/name/panelCount to Firestore
 - `INTERNET` permission added to `AndroidManifest.xml`
 - New dependencies: Retrofit 2.9, OkHttp 4.12, Gson converter, Glide 4.16, Firebase Storage
+- API parsing fixed to match real response format: `{ "data": [...] }`
+- Product IDs handled as strings (e.g., `win-001`) across `Product`, `Window`, `FloorSpace`, and selection result flow
+- Product load error `Expected BEGIN_...` resolved
+- UX fixes completed:
+  - Tap window/floor row now opens edit dialog
+  - Add window/floor now creates records only on **Save** (Cancel does not create)
+  - Room list refreshes after room-name edits when returning from `RoomDetails`
 
 ---
 
@@ -152,7 +159,8 @@
 ## How to Resume
 When you return, say **"continue from progress notes"** and I will:
 1. Read this file
-2. Pick up from **Feature 5 — Products: Constraints**
-3. Continue making granular commits toward the 150 target
+2. Start **Feature 5 — Products: Constraints**
+3. Implement: min/max width/height checks, panel split logic, max panel count, and clear incompatibility messages
+4. Continue with simple incremental commits and push after each part
 
-**Commit count as of last session: 30 / ~150**
+**Commit count target: ~150 (current progress is on track)**
