@@ -22,6 +22,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".HouseDetails" />
+        <activity android:name=".RoomDetails" />
         <activity android:name=".MovieDetails" />
     </application>
 

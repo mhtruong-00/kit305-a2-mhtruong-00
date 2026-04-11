@@ -72,6 +72,15 @@ class HouseDetails : AppCompatActivity() {
         }
     }
 
+    private fun openRoomDetails(position: Int) {
+        if (position < 0 || position >= roomList.size) return
+        val room = roomList[position]
+        val i = Intent(this, RoomDetails::class.java)
+        i.putExtra("room_id", room.id)
+        i.putExtra("room_name", room.name ?: "")
+        startActivity(i)
+    }
+
     private fun addRoom(houseId: String?) {
         if (houseId.isNullOrBlank()) return
 
@@ -188,3 +197,4 @@ class HouseDetails : AppCompatActivity() {
         }
     }
 }
+
