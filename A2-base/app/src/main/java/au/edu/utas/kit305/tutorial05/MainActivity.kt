@@ -7,24 +7,25 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import au.edu.utas.kit305.tutorial05.databinding.ActivityMainBinding
-import au.edu.utas.kit305.tutorial05.databinding.MyListItemBinding
+import au.edu.utas.kit305.tutorial05.databinding.HouseListItemBinding
 
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
 import com.google.firebase.ktx.Firebase
+
 const val FIREBASE_TAG = "FirebaseLogging"
 const val HOUSE_INDEX = "House_Index"
 const val MOVIE_INDEX = "Movie_Index"
 val items = mutableListOf<Movie>()
 val houses = mutableListOf<House>()
 
-
-class MainActivity : AppCompatActivity()
-{
-    private lateinit var ui : ActivityMainBinding
+class MainActivity : AppCompatActivity() {
+    private lateinit var ui: ActivityMainBinding
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,28 +36,23 @@ class MainActivity : AppCompatActivity()
         ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
         ui.myList.adapter = HouseAdapter(houseList = houses)
 
-//vertical list
         ui.myList.layoutManager = LinearLayoutManager(this)
         ui.btnAddHouse.setOnClickListener { addHouse() }
 
-//get db connection
         val db = Firebase.firestore
         Log.d("FIREBASE", "Firebase connected: ${db.app.name}")
 
-//get all houses
         val housesCollection = db.collection("houses")
         ui.lblMovieCount.text = "Loading..."
         housesCollection
             .get()
             .addOnSuccessListener { result ->
-                houses.clear() //clear before reload to avoid duplicates after config changes
-                for (document in result)
-                {
+                houses.clear()
+                for (document in result) {
                     val house = document.toObject<House>()
                     house.id = document.id
                     houses.add(house)
                 }
-                // this is fine for now while the list is simple; we will optimize with specific events later
                 ui.myList.adapter?.notifyDataSetChanged()
                 ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
             }
@@ -74,10 +70,7 @@ class MainActivity : AppCompatActivity()
     }
 
     private fun addHouse() {
-        val newHouse = House(
-            customerName = "New Customer",
-            address = "New Address"
-        )
+        val newHouse = House(customerName = "New Customer", address = "New Address")
 
         Firebase.firestore.collection("houses")
             .add(newHouse)
@@ -103,22 +96,62 @@ class MainActivity : AppCompatActivity()
             .show()
     }
 
-    private fun showHouseActions(position: Int) {
+    private fun showEditHouseDialog(position: Int) {
         if (position < 0 || position >= houses.size) return
+        val house = houses[position]
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = (16 * resources.displayMetrics.density).toInt()
+            setPadding(p, p, p, 0)
+        }
+
+        val nameEdit = EditText(this).apply {
+            hint = "Customer name"
+            setText(house.customerName ?: "")
+        }
+
+        val addressEdit = EditText(this).apply {
+            hint = "Address"
+            setText(house.address ?: "")
+        }
+
+        layout.addView(nameEdit)
+        layout.addView(addressEdit)
+
         AlertDialog.Builder(this)
-            .setTitle(R.string.house_actions_title)
-            .setItems(arrayOf(getString(R.string.open_house), getString(R.string.delete_house_action))) { _, which ->
-                when (which) {
-                    0 -> {
-                        val i = Intent(this, HouseDetails::class.java)
-                        i.putExtra(HOUSE_INDEX, position)
-                        startActivity(i)
-                    }
-                    1 -> promptDeleteHouse(position)
-                }
+            .setTitle("Edit House")
+            .setView(layout)
+            .setPositiveButton("Save") { _, _ ->
+                val newName = nameEdit.text.toString().trim()
+                val newAddress = addressEdit.text.toString().trim()
+                if (newName.isBlank() || newAddress.isBlank()) return@setPositiveButton
+                updateHouse(position, newName, newAddress)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun updateHouse(position: Int, customerName: String, address: String) {
+        if (position < 0 || position >= houses.size) return
+        val house = houses[position]
+        val houseId = house.id ?: return
+
+        val updates = mapOf(
+            "customerName" to customerName,
+            "address" to address
+        )
+
+        Firebase.firestore.collection("houses").document(houseId)
+            .update(updates)
+            .addOnSuccessListener {
+                house.customerName = customerName
+                house.address = address
+                ui.myList.adapter?.notifyItemChanged(position)
+            }
+            .addOnFailureListener {
+                Log.e(FIREBASE_TAG, "Error updating house", it)
+            }
     }
 
     private fun deleteHouse(position: Int) {
@@ -151,35 +184,31 @@ class MainActivity : AppCompatActivity()
             }
     }
 
-    inner class HouseHolder(var ui: MyListItemBinding) : RecyclerView.ViewHolder(ui.root) {}
+    inner class HouseHolder(var ui: HouseListItemBinding) : RecyclerView.ViewHolder(ui.root)
 
-    inner class HouseAdapter(private val houseList: MutableList<House>) : RecyclerView.Adapter<HouseHolder>()
-    {
+    inner class HouseAdapter(private val houseList: MutableList<House>) : RecyclerView.Adapter<HouseHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HouseHolder {
-            val ui = MyListItemBinding.inflate(layoutInflater, parent, false)
+            val ui = HouseListItemBinding.inflate(layoutInflater, parent, false)
             return HouseHolder(ui)
         }
 
-        override fun getItemCount(): Int {
-            return houseList.size
-        }
+        override fun getItemCount(): Int = houseList.size
 
         override fun onBindViewHolder(holder: HouseHolder, position: Int) {
             val house = houseList[position]
             holder.ui.txtName.text = house.customerName ?: "Unnamed customer"
-            holder.ui.txtYear.text = house.address ?: "No address"
+            holder.ui.txtAddress.text = house.address ?: "No address"
 
             holder.ui.root.setOnClickListener {
                 val currentPosition = holder.bindingAdapterPosition
                 if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                showHouseActions(currentPosition)
+                showEditHouseDialog(currentPosition)
             }
 
-            holder.ui.root.setOnLongClickListener {
+            holder.ui.btnDeleteHouse.setOnClickListener {
                 val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@setOnLongClickListener true
+                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
                 promptDeleteHouse(currentPosition)
-                true
             }
         }
     }
