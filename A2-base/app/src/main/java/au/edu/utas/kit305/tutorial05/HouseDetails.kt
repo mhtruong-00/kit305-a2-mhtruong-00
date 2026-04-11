@@ -18,21 +18,27 @@ import com.google.firebase.ktx.Firebase
 class HouseDetails : AppCompatActivity() {
     private lateinit var ui: ActivityHouseDetailsBinding
     private val roomList = mutableListOf<Room>()
+    private var houseId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = ActivityHouseDetailsBinding.inflate(layoutInflater)
         setContentView(ui.root)
 
-        val houseIndex = intent.getIntExtra(HOUSE_INDEX, -1)
-        if (houseIndex == -1 || houseIndex >= houses.size) {
+        houseId = intent.getStringExtra(HOUSE_ID_EXTRA)
+        if (houseId.isNullOrBlank()) {
+            val houseIndex = intent.getIntExtra(HOUSE_INDEX, -1)
+            if (houseIndex != -1 && houseIndex < houses.size) {
+                houseId = houses[houseIndex].id
+            }
+        }
+
+        if (houseId.isNullOrBlank()) {
             finish()
             return
         }
 
-        val house = houses[houseIndex]
-        ui.txtCustomerName.setText(house.customerName ?: "")
-        ui.txtAddress.setText(house.address ?: "")
+        title = intent.getStringExtra(HOUSE_NAME_EXTRA) ?: getString(R.string.label_house_rooms)
 
         ui.lstRooms.layoutManager = LinearLayoutManager(this)
         ui.lstRooms.adapter = RoomAdapter(
@@ -42,42 +48,13 @@ class HouseDetails : AppCompatActivity() {
         )
 
         ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
-        ui.btnAddRoom.setOnClickListener { addRoom(house.id) }
+        ui.btnAddRoom.setOnClickListener { addRoom(houseId) }
 
-        loadRooms(house.id)
-
-        ui.btnSaveHouse.setOnClickListener {
-            house.customerName = ui.txtCustomerName.text.toString().trim()
-            house.address = ui.txtAddress.text.toString().trim()
-
-            if (house.customerName.isNullOrBlank() || house.address.isNullOrBlank()) {
-                ui.lblRoomCount.text = getString(R.string.error_house_required_fields)
-                return@setOnClickListener
-            }
-
-            val houseId = house.id
-            if (houseId.isNullOrBlank()) {
-                ui.lblRoomCount.text = getString(R.string.error_house_save_failed)
-                return@setOnClickListener
-            }
-
-            Firebase.firestore.collection("houses")
-                .document(houseId)
-                .set(house)
-                .addOnSuccessListener {
-                    Log.d(FIREBASE_TAG, "Updated house $houseId")
-                    finish()
-                }
-                .addOnFailureListener {
-                    Log.e(FIREBASE_TAG, "Error updating house $houseId", it)
-                    ui.lblRoomCount.text = getString(R.string.error_house_save_failed)
-                }
-        }
+        loadRooms(houseId)
     }
 
     override fun onResume() {
         super.onResume()
-        // Reload room names in case they were edited in RoomDetails
         ui.lstRooms.adapter?.notifyDataSetChanged()
     }
 
@@ -190,4 +167,3 @@ class HouseDetails : AppCompatActivity() {
         }
     }
 }
-
