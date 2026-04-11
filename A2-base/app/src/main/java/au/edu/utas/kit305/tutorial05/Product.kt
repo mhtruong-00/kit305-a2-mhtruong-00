@@ -3,12 +3,16 @@ package au.edu.utas.kit305.tutorial05
 import com.google.gson.annotations.SerializedName
 
 data class Product(
-    val id: Int = 0,
+    val id: String = "",
     val name: String = "",
     val description: String = "",
-    val category: String = "",          // "window" or "floor"
-    val image: String? = null,
-    val price: Double = 0.0,
+    val category: String = "", // "window" or "floor"
+
+    @SerializedName(value = "imageUrl", alternate = ["image"])
+    val imageUrl: String? = null,
+
+    @SerializedName(value = "price_per_sqm", alternate = ["price"])
+    val pricePerSqm: Double = 0.0,
 
     @SerializedName(value = "minHeight", alternate = ["min_height"])
     val minHeight: Int = 0,
@@ -28,3 +32,10 @@ data class Product(
     val variants: List<String>? = null
 )
 
+data class ProductListResponse(
+    val data: List<Product> = emptyList()
+)
+
+data class ProductDetailResponse(
+    val data: Product? = null
+)

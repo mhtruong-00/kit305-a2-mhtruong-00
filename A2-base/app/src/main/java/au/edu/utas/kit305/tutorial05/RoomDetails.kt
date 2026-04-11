@@ -48,10 +48,10 @@ class RoomDetails : AppCompatActivity() {
     private val windowProductLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && pendingWindowPos >= 0) {
-                val productId   = result.data?.getIntExtra(RESULT_PRODUCT_ID, -1) ?: -1
+                val productId = result.data?.getStringExtra(RESULT_PRODUCT_ID) ?: ""
                 val productName = result.data?.getStringExtra(RESULT_PRODUCT_NAME) ?: ""
-                val panelCount  = result.data?.getIntExtra(RESULT_PANEL_COUNT, 1) ?: 1
-                if (productId != -1) saveWindowProduct(pendingWindowPos, productId, productName, panelCount)
+                val panelCount = result.data?.getIntExtra(RESULT_PANEL_COUNT, 1) ?: 1
+                if (productId.isNotBlank()) saveWindowProduct(pendingWindowPos, productId, productName, panelCount)
             }
             pendingWindowPos = -1
         }
@@ -59,9 +59,9 @@ class RoomDetails : AppCompatActivity() {
     private val floorProductLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && pendingFloorSpacePos >= 0) {
-                val productId   = result.data?.getIntExtra(RESULT_PRODUCT_ID, -1) ?: -1
+                val productId = result.data?.getStringExtra(RESULT_PRODUCT_ID) ?: ""
                 val productName = result.data?.getStringExtra(RESULT_PRODUCT_NAME) ?: ""
-                if (productId != -1) saveFloorSpaceProduct(pendingFloorSpacePos, productId, productName)
+                if (productId.isNotBlank()) saveFloorSpaceProduct(pendingFloorSpacePos, productId, productName)
             }
             pendingFloorSpacePos = -1
         }
@@ -191,7 +191,7 @@ class RoomDetails : AppCompatActivity() {
         windowProductLauncher.launch(i)
     }
 
-    private fun saveWindowProduct(pos: Int, productId: Int, productName: String, panelCount: Int) {
+    private fun saveWindowProduct(pos: Int, productId: String, productName: String, panelCount: Int) {
         if (pos < 0 || pos >= windowList.size) return
         val w = windowList[pos]; val wId = w.id ?: return
         Firebase.firestore.collection("windows").document(wId)
@@ -269,7 +269,7 @@ class RoomDetails : AppCompatActivity() {
         floorProductLauncher.launch(i)
     }
 
-    private fun saveFloorSpaceProduct(pos: Int, productId: Int, productName: String) {
+    private fun saveFloorSpaceProduct(pos: Int, productId: String, productName: String) {
         if (pos < 0 || pos >= floorSpaceList.size) return
         val f = floorSpaceList[pos]; val fId = f.id ?: return
         Firebase.firestore.collection("floorspaces").document(fId)

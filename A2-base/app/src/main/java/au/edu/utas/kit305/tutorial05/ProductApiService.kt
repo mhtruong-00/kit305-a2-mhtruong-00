@@ -8,16 +8,15 @@ import retrofit2.http.Query
 interface ProductApiService {
 
     @GET("product")
-    suspend fun getAllProducts(): Response<List<Product>>
+    suspend fun getAllProducts(): Response<ProductListResponse>
 
     @GET("product")
     suspend fun getProductsByCategory(
         @Query("category") category: String
-    ): Response<List<Product>>
+    ): Response<ProductListResponse>
 
     @GET("product/{id}")
     suspend fun getProductById(
-        @Path("id") id: Int
-    ): Response<Product>
+        @Path("id") id: String
+    ): Response<ProductDetailResponse>
 }
-
