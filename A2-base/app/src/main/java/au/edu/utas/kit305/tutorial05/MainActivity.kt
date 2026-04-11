@@ -184,6 +184,25 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    private fun showHouseTapOptions(position: Int) {
+        if (position < 0 || position >= houses.size) return
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.house_actions_title)
+            .setItems(arrayOf(getString(R.string.edit_house_action), getString(R.string.open_rooms_action))) { _, which ->
+                when (which) {
+                    0 -> showEditHouseDialog(position)
+                    1 -> {
+                        val i = Intent(this, HouseDetails::class.java)
+                        i.putExtra(HOUSE_INDEX, position)
+                        startActivity(i)
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     inner class HouseHolder(var ui: HouseListItemBinding) : RecyclerView.ViewHolder(ui.root)
 
     inner class HouseAdapter(private val houseList: MutableList<House>) : RecyclerView.Adapter<HouseHolder>() {
@@ -202,7 +221,7 @@ class MainActivity : AppCompatActivity() {
             holder.ui.root.setOnClickListener {
                 val currentPosition = holder.bindingAdapterPosition
                 if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                showEditHouseDialog(currentPosition)
+                showHouseTapOptions(currentPosition)
             }
 
             holder.ui.btnDeleteHouse.setOnClickListener {
