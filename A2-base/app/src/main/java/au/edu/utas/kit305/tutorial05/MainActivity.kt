@@ -103,6 +103,24 @@ class MainActivity : AppCompatActivity()
             .show()
     }
 
+    private fun showHouseActions(position: Int) {
+        if (position < 0 || position >= houses.size) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.house_actions_title)
+            .setItems(arrayOf(getString(R.string.open_house), getString(R.string.delete_house_action))) { _, which ->
+                when (which) {
+                    0 -> {
+                        val i = Intent(this, HouseDetails::class.java)
+                        i.putExtra(HOUSE_INDEX, position)
+                        startActivity(i)
+                    }
+                    1 -> promptDeleteHouse(position)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun deleteHouse(position: Int) {
         val house = houses[position]
         val houseId = house.id ?: return
@@ -154,9 +172,7 @@ class MainActivity : AppCompatActivity()
             holder.ui.root.setOnClickListener {
                 val currentPosition = holder.bindingAdapterPosition
                 if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                val i = Intent(holder.ui.root.context, HouseDetails::class.java)
-                i.putExtra(HOUSE_INDEX, currentPosition)
-                this@MainActivity.startActivity(i)
+                showHouseActions(currentPosition)
             }
 
             holder.ui.root.setOnLongClickListener {
