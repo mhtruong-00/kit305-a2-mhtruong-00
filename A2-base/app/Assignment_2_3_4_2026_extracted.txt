@@ -1,0 +1,947 @@
+Assignment 2,3,4 2026 
+Criteria HD+ HD DN CR PP NN 
+House and 
+Room 
+Lists and 
+Overall 
+App 
+Design 
+  
+10 points 
+A list of houses is shown, 
+and for each house a list of 
+rooms is shown. 
+The user can edit the 
+details of a house and 
+room, and sensible choices 
+were made for this. 
+ 
+The interface for this part 
+is highly intuitive; provides 
+a consistent look and feel 
+across all screens and is 
+aesthetically pleasing.  
+Application never crashes 
+and has been 
+tested thoroughly to avoid 
+the existence of bugs. 
+The houses and rooms can 
+be filtered OR searched in 
+some way. 
+(HD+) Application has an 
+app icon. 
+A list of houses is shown, 
+and for each house a list of 
+rooms is shown. 
+The user can edit the 
+details of a house and 
+room, and sensible choices 
+were made for this. 
+ 
+The interface for this part 
+is highly intuitive; provides 
+a consistent look and feel 
+across all screens and is 
+aesthetically pleasing.  
+Application never crashes 
+and has been 
+tested thoroughly to avoid 
+the existence of bugs. 
+The houses and rooms can 
+be filtered OR searched in 
+some way. 
+A list of houses is 
+shown, and for each 
+house a list of rooms is 
+shown. 
+The user can edit the 
+details of a house and 
+room, and sensible 
+choices were made for 
+this. 
+The interface for this 
+part is intuitive and 
+aesthetically pleasing. 
+Application never 
+crashes. There are only 
+very minor bugs (if 
+any). 
+A list of houses is 
+shown, and for 
+each house a list 
+of rooms is 
+shown. 
+The user can edit 
+the details of a 
+house and room. 
+The interface for 
+this part 
+is somewhat 
+intuitive.  
+There are 
+only some bugs 
+(if any) in the 
+application 
+and/or rarely 
+crashes. 
+A list of rooms is 
+shown, but there is no 
+grouping of rooms into 
+houses. 
+The user can edit the 
+details of a house and 
+room, but there are 
+some problems with 
+this implementation. 
+There are only some 
+bugs (if any) in the 
+application and/or 
+sometimes crashes. 
+The application fails 
+to compile 
+OR  
+crashes on start-up 
+OR 
+crashes frequently. 
+The user is unable 
+to view data. 
+  
+Criteria HD+ HD DN CR PP NN 
+House and 
+Room 
+The user can add and 
+delete rooms and 
+The user can add and 
+delete rooms and 
+The user can add and delete 
+rooms and houses in a way 
+The user can add and delete 
+rooms and houses in a way 
+The user can 
+add and 
+Fails to provide 
+functionality for 
+
+Add/Delete 
+  
+5 points 
+houses in a way that 
+is failure-resistant 
+and/or forgiving. 
+The app doesn't allow 
+invalid inputs. 
+Deleting a house 
+deletes all rooms 
+within that house. 
+The interface for this 
+is visually pleasing 
+and intuitive. 
+houses in a way that 
+is failure-resistant 
+and/or forgiving. 
+The app doesn't allow 
+invalid inputs. 
+Deleting a house 
+deletes all rooms 
+within that house. 
+that is failure-resistant 
+and/or forgiving. 
+The app doesn't allow 
+invalid inputs. 
+Deleting a house deletes all 
+rooms within that house. 
+However, there are some 
+bugs in the implementation. 
+that is failure-resistant 
+and/or forgiving. 
+However, there are many 
+bugs in the implementation. 
+delete rooms 
+and houses. 
+deleting or adding 
+rooms or houses. 
+  
+Criteria HD+ HD DN CR PP NN 
+Floor/Window 
+Space 
+Measurement 
+  
+15 points 
+The user is able to add, 
+edit, and delete floor 
+and window spaces and 
+these interfaces are 
+distinct from each 
+other. 
+Spaces are associated 
+with rooms. 
+A width and height for 
+each space can be 
+entered, and invalid 
+inputs are handled. 
+There are no bugs in 
+the implementation. 
+The interface for this 
+The user is able to add, 
+edit, and delete floor 
+and window spaces and 
+these interfaces are 
+distinct from each 
+other. 
+Spaces are associated 
+with rooms. 
+A width and height for 
+each space can be 
+entered, and invalid 
+inputs are handled. 
+There are no bugs in 
+the implementation. 
+The interface for this 
+The user is able to add, 
+edit, and delete floor 
+and window spaces 
+and these interfaces 
+are distinct from each 
+other. 
+Spaces are associated 
+with rooms. 
+A width and height for 
+each space can be 
+entered, and invalid 
+inputs are handled. 
+OR 
+Would be HD level, 
+but there are 
+The user is able to 
+add, edit, and delete 
+floor and window 
+spaces and sensible 
+choices have been 
+made for this. 
+Spaces are associated 
+with rooms. 
+A width and height for 
+each space can be 
+entered. 
+OR 
+Would be DN level, 
+but there are 
+some bugs in the 
+The user is able to 
+add, edit, and 
+delete floor and 
+window spaces.  
+A width and height 
+for each space can 
+be entered. 
+OR 
+Would be CR level, 
+but there are 
+some bugs in the 
+implementation. 
+Fails to provide 
+floor/window 
+space  functionality 
+OR 
+Functionality doesn't 
+work properly due to 
+bugs 
+
+part of the application 
+is efficient (in terms of 
+Don Norman's design 
+principles), and 
+aesthetically pleasing. 
+part of the application 
+is efficient (in terms of 
+Don Norman's design 
+principles), and 
+aesthetically pleasing. 
+some bugs in the 
+implementation. 
+implementation. 
+  
+Criteria HD+ HD DN CR PP NN 
+Products - 
+Selection 
+  
+10 points 
+The user is able to 
+browse products for a 
+floor/window space. 
+Only floor products are 
+shown for floor spaces, 
+and only window 
+products are shown for 
+window spaces. 
+All product details from 
+the assignment 
+specification can be 
+seen, however sensible 
+choices for the product 
+list have been made. 
+Products are sourced 
+from the provided 
+Product API, and not 
+hard-coded into the 
+application. 
+Products can be 
+selected for each 
+window/floor space and 
+the interface for this 
+part of the application is 
+efficient (in terms of 
+The user is able to 
+browse products for a 
+floor/window space. 
+Only floor products are 
+shown for floor spaces, 
+and only window 
+products are shown for 
+window spaces. 
+All product details from 
+the assignment 
+specification can be 
+seen, however sensible 
+choices for the product 
+list have been made. 
+Products are sourced 
+from the provided 
+Product API, and not 
+hard-coded into the 
+application. 
+Products can be 
+selected for each 
+window/floor space and 
+the interface for this 
+part of the application is 
+efficient (in terms of 
+The user is able to 
+browse products for a 
+floor/window space. 
+Only floor products are 
+shown for floor spaces, 
+and only window 
+products are shown for 
+window spaces. 
+All product details from 
+the assignment 
+specification can be 
+seen, however sensible 
+choices for the product 
+list have been made. 
+Products are sourced 
+from the provided 
+Product API, and not 
+hard-coded into the 
+application. 
+Products can be 
+selected for each 
+window/floor space. 
+There are no bugs in 
+the implementation. 
+The user is able to 
+browse products for a 
+floor/window space.  
+Most product details 
+from the assignment 
+specification can be 
+seen, however sensible 
+choices for the product 
+list have been made. 
+Products can be 
+selected for each 
+window/floor space. 
+OR 
+Would be DN level, but 
+there are some bugs in 
+the implementation. 
+The user is able to 
+browse products for a 
+floor/window space.  
+Most product details 
+from the assignment 
+specification can be 
+seen. 
+Products can be 
+selected for each 
+window/floor space. 
+OR 
+Would be CR level, but 
+there are some bugs in 
+the implementation. 
+Fails to 
+implement any 
+substantial 
+product 
+functionality, or 
+there are many 
+bugs in the 
+implementation. 
+
+Don Norman's design 
+principles), and 
+aesthetically pleasing. 
+There are no bugs in the 
+implementation. 
+Don Norman's design 
+principles), and 
+aesthetically pleasing. 
+There are no bugs in the 
+implementation. 
+Products - 
+Constraints 
+  
+10 points 
+The user is prevented 
+from selecting a product 
+for a window space that 
+is not compatible with 
+ALL of the constraints 
+listed on the assignment 
+specification:  
+• Min/Max Height 
+• Min/Max Width 
+• Panel Splitting 
+(while still 
+respecting 
+Min/Max 
+Width) 
+• Panel Count 
+The application 
+provides correct detail 
+on why a product 
+cannot be selected for a 
+given window space. 
+The interface for this 
+functionality is really 
+intuitive, failure-
+resistant, and visually 
+pleasing. 
+The user is prevented 
+from selecting a product 
+for a window space that 
+is not compatible with 
+ALL of the constraints 
+listed on the assignment 
+specification:  
+• Min/Max Height 
+• Min/Max Width 
+• Panel Splitting 
+(while still 
+respecting 
+Min/Max 
+Width) 
+• Panel Count 
+The application provides 
+correct detail on why a 
+product cannot be 
+selected for a given 
+window space. 
+The interface for this 
+functionality is intuitive, 
+failure-resistant, and 
+visually pleasing. 
+The user is prevented 
+from selecting a 
+product for a window 
+space that is not 
+compatible with ALL of 
+the constraints listed 
+on the assignment 
+specification:  
+• Min/Max 
+Height 
+• Min/Max Width 
+• Panel Splitting 
+(while still 
+respecting 
+Min/Max 
+Width) 
+• Panel Count 
+The application 
+provides correct detail 
+on why a product 
+cannot be selected for a 
+given window space. 
+The user is prevented 
+from selecting a 
+product for a window 
+space that is not 
+compatible with MOST 
+of the constraints listed 
+on the assignment 
+specification:  
+• Min/Max 
+Height 
+• Min/Max 
+Width 
+• Panel Splitting 
+(while still 
+respecting 
+Min/Max 
+Width) 
+• Panel Count 
+OR 
+Would be DN level, but 
+there are some bugs in 
+the implementation. 
+The user is prevented 
+from selecting a 
+product for a window 
+space that is not 
+compatible with ONE of 
+the constraints listed 
+on the assignment 
+specification:  
+• Min/Max 
+Height 
+• Min/Max 
+Width 
+• Panel Splitting 
+(while still 
+respecting 
+Min/Max 
+Width) 
+• Panel Count 
+OR 
+Would be CR level, but 
+there are some bugs in 
+the implementation. 
+Fails to 
+implement 
+constraints, or 
+there are 
+many bugs in the 
+implementation. 
+  
+
+Criteria HD+ HD DN CR PP NN 
+Data 
+Persistence 
+  
+15 points 
+All data entered by 
+the user persists 
+between runs of the 
+application.  
+There are no 
+noticeable bugs with 
+the persistence. 
+The application 
+functions when there 
+is no data in the 
+database. 
+All data entered by 
+the user persists 
+between runs of the 
+application.  
+There are no 
+noticeable bugs with 
+the persistence. 
+The application 
+functions when there 
+is no data in the 
+database. 
+All data entered by 
+the user persists 
+between runs of the 
+application.  
+The application 
+functions when there 
+is no data in the 
+database. 
+Most data entered by 
+the user persists 
+between runs of the 
+application. 
+There are only some 
+bugs (if any) where 
+some data does not 
+save.  
+The application 
+functions when there 
+is no data in the 
+database. 
+Most data entered by the 
+user persists between runs of 
+the application.  
+There are only some bugs (if 
+any) where some data does 
+not save. 
+The application functions 
+when there is no data in the 
+database. 
+Data fails to persist 
+when the 
+application is closed 
+and re-opened. 
+  
+Criteria HD+ HD DN CR PP NN 
+Camera 
+  
+10 
+points 
+The application allows 
+you to choose a photo 
+from the phone’s 
+image gallery or 
+camera and add it to a 
+room or window/floor 
+space record. 
+The image is displayed 
+on the screen after the 
+user selected the 
+image and throughout 
+the rest of the app in a 
+sensible way. 
+The image data 
+The application allows 
+you to choose a photo 
+from the phone’s 
+image gallery or 
+camera and add it to a 
+room or window/floor 
+space record. 
+The image is displayed 
+on the screen after the 
+user selected the 
+image and throughout 
+the rest of the app in a 
+sensible way. 
+The image data 
+The application allows 
+you to choose a photo 
+from the phone’s 
+image gallery or 
+camera and add it to a 
+room or window/floor 
+space record. 
+The image is displayed 
+on the screen after the 
+user selected the 
+image and throughout 
+the rest of the app in a 
+sensible way. 
+The image 
+The application allows 
+you to choose a photo 
+from the phone’s 
+image gallery or 
+camera and add it to a 
+room or window/floor 
+space record. 
+The image is displayed 
+on the screen after the 
+user selected the 
+image, but the image 
+does not persist 
+between runs of the 
+app. 
+The application allows 
+you to choose a photo 
+from the phone’s image 
+gallery or camera and 
+display it somewhere in 
+the app (not necessarily 
+on a room or 
+window/floor space 
+record). 
+The image is displayed on 
+the screen after the user 
+selected the image, but 
+the image does not 
+persist between runs of 
+the app. 
+The application fails to 
+include camera 
+functionality 
+OR 
+The camera 
+functionality crashes 
+the app when 
+triggered. 
+
+persists between runs 
+of the application.  
+There are no bugs with 
+the camera 
+functionality. 
+(HD+) Options for 
+BOTH Camera and 
+Gallery selection are 
+provided (ignore this 
+requirement for 
+Assignment 3 iOS). 
+persists between runs 
+of the application. 
+There are no bugs 
+with the camera 
+functionality. 
+data persists between 
+runs of the 
+application.  
+There are some bugs 
+with the camera 
+functionality. 
+  
+Criteria HD+ HD DN CR PP NN 
+Sharing 
+  
+5 
+points 
+The application 
+allows you to use 
+the OS’ built-in 
+sharing functionality 
+to share a text 
+version of the 
+itemized quote. 
+Each relevant 
+details and 
+calculated costs are 
+included. 
+(HD+) 
+The text is in CSV 
+format such that it 
+could be displayed 
+in Excel for example. 
+The application 
+allows you to use 
+the OS’ built-in 
+sharing functionality 
+to share a text 
+version of the 
+itemized quote. 
+Each relevant details 
+and calculated costs 
+are included. 
+The application allows you 
+to use the OS’ built-in 
+sharing functionality to 
+share some data from the 
+app (either a single 
+house/room/space record). 
+There are no bugs with this 
+implementation. 
+The application allows you 
+to use the OS’ built-in 
+sharing functionality to 
+share some data from the 
+app (either a single 
+house/room/space record). 
+There are some bugs with 
+this implementation. 
+The application 
+allows you to use 
+the OS’ built-in 
+sharing 
+functionality to 
+share something 
+within the app. 
+The application fails to 
+include sharing 
+functionality 
+OR 
+The sharing 
+functionality crashes 
+the app when 
+triggered. 
+
+  
+Criteria HD+ HD DN CR PP NN 
+Quote 
+Display 
+  
+10 
+points 
+The user is able to view 
+an itemised quote for a 
+house, showing a total 
+cost, the cost per room, 
+and cost per 
+window/floor space.  
+The product for each 
+window/floor space is 
+correctly shown, 
+including the 
+measurement and the 
+variant selected. 
+Information is shown in 
+a concise way that 
+makes effective use of 
+screen realestate. 
+Users can filter out 
+rooms from the quote, 
+and the calculated totals 
+reflect this immediately.  
+There are no bugs in the 
+implementation. 
+The interface for this 
+part is really forgiving, 
+efficient, and visually 
+pleasing. 
+The user is able to view 
+an itemised quote for a 
+house, showing a total 
+cost, the cost per room, 
+and cost per 
+window/floor space.  
+The product for each 
+window/floor space is 
+correctly shown, 
+including the 
+measurement and the 
+variant selected. 
+Information is shown in 
+a concise way that 
+makes effective use of 
+screen realestate. 
+Users can filter out 
+rooms from the quote, 
+and the calculated totals 
+reflect this immediately.  
+There are no bugs in the 
+implementation. 
+The interface for this 
+part is forgiving, 
+efficient, and visually 
+pleasing. 
+The user is able to view 
+an itemised quote for a 
+house, showing a total 
+cost, the cost per room, 
+and cost per 
+window/floor space.  
+The product for each 
+window/floor space is 
+correctly shown, 
+including the 
+measurement and the 
+variant selected. 
+Information is shown in 
+a concise way that 
+makes effective use of 
+screen realestate. 
+Users can filter out 
+rooms from the quote, 
+and the calculated totals 
+reflect this immediately.  
+There are no bugs in the 
+implementation. 
+The user is able to 
+view an itemised 
+quote for a house, 
+showing a cost per 
+window/floor space.  
+The product for each 
+window/floor space is 
+correctly shown, 
+including the 
+measurement. 
+Information is shown 
+in a concise way that 
+makes effective use of 
+screen realestate. 
+OR 
+Would be DN level, 
+but there are some 
+bugs in the 
+implementation. 
+The user is able to view 
+an itemised quote for a 
+house, showing a cost 
+per window/floor 
+space.  
+The product for each 
+window/floor space is 
+correctly shown. 
+OR 
+Would be CR level, but 
+there are some bugs in 
+the implementation. 
+Fails to provide 
+any quote display 
+functionality or 
+any correct cost 
+calculations. 
+Custom 
+Feature 
+The chosen custom 
+feature is very suitable 
+for the assignment 
+The chosen custom 
+feature is very suitable 
+for the assignment 
+The chosen custom 
+feature is suitable for 
+The chosen custom 
+feature is suitable for 
+A custom feature has 
+been chosen, or a CR+ 
+level custom feature has 
+Fails to implement 
+a custom feature is 
+
+  
+10 
+points 
+theme. 
+The chosen feature has 
+no bugs in the 
+implementation and is 
+sufficiently complex 
+enough in terms of 
+functionality. 
+The custom feature is 
+highly intuitive and 
+usable in terms of the 
+design principles taught 
+in this unit. 
+theme. 
+The chosen feature has 
+no bugs in the 
+implementation and is 
+sufficiently complex 
+enough in terms of 
+functionality. 
+The custom feature is 
+highly intuitive and 
+usable in terms of the 
+design principles taught 
+in this unit. 
+the assignment theme. 
+The chosen feature has 
+no bugs in the 
+implementation and is 
+sufficiently complex 
+enough in terms of 
+functionality. 
+The custom feature is 
+intuitive and usable in 
+terms of the design 
+principles taught in this 
+unit. 
+the assignment theme. 
+The chosen feature 
+has little or no bugs in 
+the implementation. 
+The custom feature 
+is somewhat intuitive 
+and usable in terms of 
+the design principles 
+taught in this unit. 
+been chosen however is 
+has many bugs in the 
+implementation. 
+attempted. 
+OR 
+The custom 
+feature is not 
+obvious, and not 
+documented in the 
+assignment 
+submission in 
+some way. 
+  
+ 
