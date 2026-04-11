@@ -6,39 +6,16 @@
     android:layout_height="match_parent"
     tools:context=".HouseDetails">
 
-    <EditText
-        android:id="@+id/txtCustomerName"
-        android:layout_width="0dp"
+    <TextView
+        android:id="@+id/lblHouseRoomsTitle"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        android:hint="Customer name"
+        android:text="@string/label_house_rooms"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <EditText
-        android:id="@+id/txtAddress"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
-        android:hint="Address"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtCustomerName" />
-
-    <Button
-        android:id="@+id/btnSaveHouse"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Save House"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtAddress" />
 
     <TextView
         android:id="@+id/lblRoomCount"
@@ -48,7 +25,7 @@
         android:text="0 Rooms"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnSaveHouse" />
+        app:layout_constraintTop_toBottomOf="@id/lblHouseRoomsTitle" />
 
     <Button
         android:id="@+id/btnAddRoom"
@@ -71,4 +48,3 @@
         app:layout_constraintTop_toBottomOf="@id/btnAddRoom" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
