@@ -12,11 +12,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 const val EXTRA_PRODUCT_TYPE = "product_type"
 const val EXTRA_SPACE_WIDTH = "space_width"
@@ -55,10 +52,11 @@ class ProductListActivity : AppCompatActivity() {
         val typeLabel = if (productType == "window") "Window" else "Floor"
         lblTitle.text = "Select a $typeLabel Product"
 
-        val dimLabel = if (productType == "window")
-            "Window: ${spaceWidthMm}mm wide × ${spaceHeightMm}mm tall"
-        else
-            "Floor space: ${spaceWidthMm}mm × ${spaceHeightMm}mm"
+        val dimLabel = if (productType == "window") {
+            "Window: ${spaceWidthMm}mm wide x ${spaceHeightMm}mm tall"
+        } else {
+            "Floor space: ${spaceWidthMm}mm x ${spaceHeightMm}mm"
+        }
         lblSpaceInfo.text = dimLabel
 
         lstProducts.layoutManager = LinearLayoutManager(this)
@@ -66,44 +64,50 @@ class ProductListActivity : AppCompatActivity() {
             returnSelectedProduct(product)
         }
 
-        loadProducts()
+        loadProductsFromFirestore()
     }
 
-    private fun loadProducts() {
+    private fun loadProductsFromFirestore() {
         progressProducts.visibility = View.VISIBLE
         lblProductError.visibility = View.GONE
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val response = RetrofitClient.productApi.getProductsByCategory(productType)
-                withContext(Dispatchers.Main) {
-                    progressProducts.visibility = View.GONE
-                    if (response.isSuccessful) {
-                        val result = response.body()?.data ?: emptyList()
-                        products.clear()
-                        products.addAll(result)
-                        lstProducts.adapter?.notifyDataSetChanged()
-                        if (products.isEmpty()) {
-                            lblProductError.text = "No $productType products available"
-                            lblProductError.visibility = View.VISIBLE
-                        } else {
-                            lblProductError.visibility = View.GONE
-                        }
-                    } else {
-                        lblProductError.text = "Failed to load products (${response.code()})"
-                        lblProductError.visibility = View.VISIBLE
-                        Log.e(FIREBASE_TAG, "Product API error: ${response.code()}")
-                    }
+        Firebase.firestore.collection("products")
+            .whereEqualTo("category", productType)
+            .get()
+            .addOnSuccessListener { result ->
+                progressProducts.visibility = View.GONE
+                products.clear()
+
+                for (doc in result.documents) {
+                    val p = Product(
+                        id = doc.getString("id") ?: doc.id,
+                        name = doc.getString("name") ?: "",
+                        description = doc.getString("description") ?: "",
+                        category = doc.getString("category") ?: "",
+                        imageUrl = doc.getString("imageUrl"),
+                        pricePerSqm = doc.getDouble("price_per_sqm") ?: (doc.getDouble("pricePerSqm") ?: 0.0),
+                        minWidth = doc.getLong("min_width")?.toInt() ?: (doc.getLong("minWidth")?.toInt() ?: 0),
+                        maxWidth = doc.getLong("max_width")?.toInt() ?: (doc.getLong("maxWidth")?.toInt() ?: 9999),
+                        minHeight = doc.getLong("min_height")?.toInt() ?: (doc.getLong("minHeight")?.toInt() ?: 0),
+                        maxHeight = doc.getLong("max_height")?.toInt() ?: (doc.getLong("maxHeight")?.toInt() ?: 9999),
+                        maxPanelCount = doc.getLong("max_panels")?.toInt() ?: (doc.getLong("maxPanelCount")?.toInt() ?: 1),
+                        variants = (doc.get("variants") as? List<*>)?.filterIsInstance<String>()
+                    )
+                    products.add(p)
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    progressProducts.visibility = View.GONE
-                    lblProductError.text = "Network error: ${e.message}\nCheck your internet connection."
+
+                lstProducts.adapter?.notifyDataSetChanged()
+                if (products.isEmpty()) {
+                    lblProductError.text = "No $productType products found in Firestore."
                     lblProductError.visibility = View.VISIBLE
-                    Log.e(FIREBASE_TAG, "Product API exception", e)
                 }
             }
-        }
+            .addOnFailureListener { e ->
+                progressProducts.visibility = View.GONE
+                lblProductError.text = "Could not load products: ${e.message}"
+                lblProductError.visibility = View.VISIBLE
+                Log.e(FIREBASE_TAG, "Error reading products from Firestore", e)
+            }
     }
 
     private fun returnSelectedProduct(product: Product) {
@@ -144,31 +148,20 @@ class ProductListActivity : AppCompatActivity() {
         override fun getItemCount() = products.size
 
         override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
-            val p = holder.itemView.context
             val product = products[position]
 
             holder.txtName.text = product.name
             holder.txtDescription.text = product.description
-            holder.txtPrice.text = "$${String.format("%.2f", product.pricePerSqm)} / m²"
+            holder.txtPrice.text = "$${String.format("%.2f", product.pricePerSqm)} / m2"
 
-            val constraintText = if (product.category == "window") {
-                "W: ${product.minWidth}-${product.maxWidth}mm  " +
-                    "H: ${product.minHeight}-${product.maxHeight}mm  " +
-                    "Max panels: ${product.maxPanelCount}"
+            holder.txtConstraints.text = if (product.category == "window") {
+                "W: ${product.minWidth}-${product.maxWidth}mm  H: ${product.minHeight}-${product.maxHeight}mm  Max panels: ${product.maxPanelCount}"
             } else {
                 "Floor covering"
             }
-            holder.txtConstraints.text = constraintText
 
-            if (!product.imageUrl.isNullOrBlank()) {
-                Glide.with(p)
-                    .load(product.imageUrl)
-                    .placeholder(android.R.drawable.ic_menu_gallery)
-                    .error(android.R.drawable.ic_menu_gallery)
-                    .into(holder.imgProduct)
-            } else {
-                holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
-            }
+            // No third-party image loader: use a built-in placeholder icon.
+            holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
 
             holder.itemView.setOnClickListener { onSelect(product) }
         }
