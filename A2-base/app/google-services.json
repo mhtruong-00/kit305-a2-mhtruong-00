@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "502315951774",
+    "project_id": "test-minh-tute-5",
+    "storage_bucket": "assignment-2-ce76b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:502315951774:android:f5560bba89cd70ff6f7d8f",
+        "android_client_info": {
+          "package_name": "au.edu.utas.kit305.tutorial05"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJPXIsc9h5iFtxOyXFdz7KruvhJvJFhes"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
