@@ -1,14 +1,21 @@
 <resources>
-    <string name="app_name">Android Tutorial 5</string>
+    <string name="app_name">Home Quote</string>
     <string name="error_house_required_fields">Customer name and address are required</string>
     <string name="error_house_save_failed">Could not save house</string>
     <string name="room_count_format">%1$d Rooms</string>
-    <string name="label_room">Room</string>
-    <string name="add_house">Add House</string>
-    <string name="add_room">Add Room</string>
     <string name="house_count_format">%1$d Houses</string>
+    <string name="label_room">Room</string>
+    <string name="add_house">+ Add House</string>
+    <string name="add_room">+ Add Room</string>
     <string name="delete_house_confirm">Delete this house and all its rooms?</string>
     <string name="delete_room_confirm">Delete this room?</string>
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
+    <string name="no_product_selected">No product selected</string>
+    <string name="select_product">Select Product</string>
+    <string name="loading_products">Loading products…</string>
+    <string name="error_network">Network error. Check your connection.</string>
+    <string name="window_count_format">%1$d Windows</string>
+    <string name="floor_space_count_format">%1$d Floor Spaces</string>
 </resources>
+
