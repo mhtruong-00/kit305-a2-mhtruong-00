@@ -1,6 +1,7 @@
 package au.edu.utas.kit305.tutorial05
 
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -34,9 +35,11 @@ class HouseDetails : AppCompatActivity() {
         ui.txtAddress.setText(house.address ?: "")
 
         ui.lstRooms.layoutManager = LinearLayoutManager(this)
-        ui.lstRooms.adapter = RoomAdapter(roomList) { position ->
-            promptDeleteRoom(position)
-        }
+        ui.lstRooms.adapter = RoomAdapter(
+            rooms = roomList,
+            onClick = { position -> openRoomDetails(position) },
+            onLongPress = { position -> promptDeleteRoom(position) }
+        )
 
         ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
         ui.btnAddRoom.setOnClickListener { addRoom(house.id) }
@@ -62,7 +65,7 @@ class HouseDetails : AppCompatActivity() {
                 .document(houseId)
                 .set(house)
                 .addOnSuccessListener {
-                    Log.d(FIREBASE_TAG, "Successfully updated house $houseId")
+                    Log.d(FIREBASE_TAG, "Updated house $houseId")
                     finish()
                 }
                 .addOnFailureListener {
@@ -70,6 +73,12 @@ class HouseDetails : AppCompatActivity() {
                     ui.lblRoomCount.text = getString(R.string.error_house_save_failed)
                 }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Reload room names in case they were edited in RoomDetails
+        ui.lstRooms.adapter?.notifyDataSetChanged()
     }
 
     private fun openRoomDetails(position: Int) {
@@ -83,12 +92,7 @@ class HouseDetails : AppCompatActivity() {
 
     private fun addRoom(houseId: String?) {
         if (houseId.isNullOrBlank()) return
-
-        val newRoom = Room(
-            houseId = houseId,
-            name = "New Room"
-        )
-
+        val newRoom = Room(houseId = houseId, name = "New Room")
         Firebase.firestore.collection("rooms")
             .add(newRoom)
             .addOnSuccessListener {
@@ -105,7 +109,6 @@ class HouseDetails : AppCompatActivity() {
 
     private fun promptDeleteRoom(position: Int) {
         if (position < 0 || position >= roomList.size) return
-
         AlertDialog.Builder(this)
             .setMessage(R.string.delete_room_confirm)
             .setPositiveButton(R.string.delete) { _, _ -> deleteRoom(position) }
@@ -116,7 +119,6 @@ class HouseDetails : AppCompatActivity() {
     private fun deleteRoom(position: Int) {
         val room = roomList[position]
         val roomId = room.id ?: return
-
         Firebase.firestore.collection("rooms")
             .document(roomId)
             .delete()
@@ -131,35 +133,23 @@ class HouseDetails : AppCompatActivity() {
     }
 
     private fun loadRooms(houseId: String?) {
-        val adapter = ui.lstRooms.adapter as RoomAdapter
         if (houseId.isNullOrBlank()) {
-            val previousCount = roomList.size
             roomList.clear()
-            if (previousCount > 0) {
-                adapter.notifyItemRangeRemoved(0, previousCount)
-            }
+            ui.lstRooms.adapter?.notifyDataSetChanged()
             ui.lblRoomCount.text = getString(R.string.room_count_format, 0)
             return
         }
-
         Firebase.firestore.collection("rooms")
             .whereEqualTo("houseId", houseId)
             .get()
             .addOnSuccessListener { result ->
-                val previousCount = roomList.size
                 roomList.clear()
                 for (document in result) {
                     val room = document.toObject<Room>()
                     room.id = document.id
                     roomList.add(room)
                 }
-
-                if (previousCount > 0) {
-                    adapter.notifyItemRangeRemoved(0, previousCount)
-                }
-                if (roomList.isNotEmpty()) {
-                    adapter.notifyItemRangeInserted(0, roomList.size)
-                }
+                ui.lstRooms.adapter?.notifyDataSetChanged()
                 ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
             }
             .addOnFailureListener {
@@ -172,29 +162,31 @@ class HouseDetails : AppCompatActivity() {
 
     class RoomAdapter(
         private val rooms: MutableList<Room>,
+        private val onClick: (Int) -> Unit,
         private val onLongPress: (Int) -> Unit
     ) : RecyclerView.Adapter<RoomHolder>() {
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RoomHolder {
             val ui = MyListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             return RoomHolder(ui)
         }
 
-        override fun getItemCount(): Int {
-            return rooms.size
-        }
+        override fun getItemCount() = rooms.size
 
         override fun onBindViewHolder(holder: RoomHolder, position: Int) {
             val room = rooms[position]
             holder.ui.txtName.text = room.name ?: "Unnamed room"
             holder.ui.txtYear.text = holder.ui.root.context.getString(R.string.label_room)
 
+            holder.ui.root.setOnClickListener {
+                val p = holder.adapterPosition
+                if (p != RecyclerView.NO_POSITION) onClick(p)
+            }
             holder.ui.root.setOnLongClickListener {
-                val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@setOnLongClickListener true
-                onLongPress(currentPosition)
+                val p = holder.adapterPosition
+                if (p != RecyclerView.NO_POSITION) onLongPress(p)
                 true
             }
         }
     }
 }
-
