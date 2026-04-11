@@ -323,7 +323,7 @@ class RoomDetails : AppCompatActivity() {
 
             holder.btnEdit.setOnClickListener   { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onEdit(p) }
             holder.btnDelete.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onDelete(p) }
-            holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }
-        }
+            holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }        }
     }
 }
+

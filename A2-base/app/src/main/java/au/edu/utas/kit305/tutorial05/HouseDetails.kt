@@ -179,14 +179,15 @@ class HouseDetails : AppCompatActivity() {
             holder.ui.txtYear.text = holder.ui.root.context.getString(R.string.label_room)
 
             holder.ui.root.setOnClickListener {
-                val p = holder.adapterPosition
+                val p = holder.bindingAdapterPosition
                 if (p != RecyclerView.NO_POSITION) onClick(p)
             }
             holder.ui.root.setOnLongClickListener {
-                val p = holder.adapterPosition
+                val p = holder.bindingAdapterPosition
                 if (p != RecyclerView.NO_POSITION) onLongPress(p)
                 true
             }
         }
     }
 }
+

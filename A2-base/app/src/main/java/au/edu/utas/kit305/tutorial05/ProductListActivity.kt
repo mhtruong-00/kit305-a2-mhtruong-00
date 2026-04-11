@@ -86,6 +86,8 @@ class ProductListActivity : AppCompatActivity() {
                         if (products.isEmpty()) {
                             lblProductError.text = "No $productType products available"
                             lblProductError.visibility = View.VISIBLE
+                        } else {
+                            lblProductError.visibility = View.GONE
                         }
                     } else {
                         lblProductError.text = "Failed to load products (${response.code()})"
@@ -177,4 +179,5 @@ class ProductListActivity : AppCompatActivity() {
         }
     }
 }
+
 

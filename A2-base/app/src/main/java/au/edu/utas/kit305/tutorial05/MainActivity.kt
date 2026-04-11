@@ -156,7 +156,7 @@ class MainActivity : AppCompatActivity()
                 if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
                 val i = Intent(holder.ui.root.context, HouseDetails::class.java)
                 i.putExtra(HOUSE_INDEX, currentPosition)
-                startActivity(i)
+                this@MainActivity.startActivity(i)
             }
 
             holder.ui.root.setOnLongClickListener {
