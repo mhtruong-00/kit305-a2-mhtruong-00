@@ -321,9 +321,13 @@ class RoomDetails : AppCompatActivity() {
             val prod = productFn(item)
             holder.txtProduct.text = if (!prod.isNullOrBlank()) "Product: $prod" else "No product selected"
 
-            holder.btnEdit.setOnClickListener   { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onEdit(p) }
+            holder.root.setOnClickListener {
+                val p = holder.bindingAdapterPosition
+                if (p != RecyclerView.NO_POSITION) onEdit(p)
+            }
+
+            holder.btnEdit.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onEdit(p) }
             holder.btnDelete.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onDelete(p) }
             holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }        }
     }
 }
-
