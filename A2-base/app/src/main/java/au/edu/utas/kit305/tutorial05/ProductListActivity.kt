@@ -109,7 +109,12 @@ class ProductListActivity : AppCompatActivity() {
         lblSpaceInfo.text = dimLabel
 
         lstProducts.layoutManager = LinearLayoutManager(this)
-        lstProducts.adapter = ProductAdapter(products) { product ->
+        lstProducts.adapter = ProductAdapter(
+            products = products,
+            spaceWidthMm = spaceWidthMm,
+            spaceHeightMm = spaceHeightMm,
+            productType = productType
+        ) { product ->
             returnSelectedProduct(product)
         }
 
@@ -239,6 +244,9 @@ class ProductListActivity : AppCompatActivity() {
 
     class ProductAdapter(
         private val products: List<Product>,
+        private val spaceWidthMm: Int,
+        private val spaceHeightMm: Int,
+        private val productType: String,
         private val onSelect: (Product) -> Unit
     ) : RecyclerView.Adapter<ProductViewHolder>() {
 
