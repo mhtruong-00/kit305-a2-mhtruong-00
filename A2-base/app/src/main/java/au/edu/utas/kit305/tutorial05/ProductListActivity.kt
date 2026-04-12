@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -283,6 +284,18 @@ class ProductListActivity : AppCompatActivity() {
                 holder.txtCompatibility.setTextColor(Color.parseColor("#2E7D32"))
                 holder.itemView.alpha = 1.0f
                 holder.itemView.setOnClickListener { onSelect(product) }
+            } else {
+                // Incompatible — show why in red and block selection
+                holder.txtCompatibility.text = "✗ ${compat.message}"
+                holder.txtCompatibility.setTextColor(Color.parseColor("#C62828"))
+                holder.itemView.alpha = 0.45f
+                holder.itemView.setOnClickListener {
+                    Toast.makeText(
+                        holder.itemView.context,
+                        "Cannot select: ${compat.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }
