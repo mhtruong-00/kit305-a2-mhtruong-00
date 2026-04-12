@@ -16,6 +16,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.math.roundToInt
 
 const val EXTRA_PRODUCT_TYPE = "product_type"
 const val EXTRA_SPACE_WIDTH = "space_width"
@@ -43,6 +44,27 @@ fun checkCompatibility(product: Product, windowWidth: Int, windowHeight: Int): C
         }
         if (windowHeight > product.maxHeight) {
             return CompatibilityResult(false, 0, "Too tall: ${windowHeight}mm (max ${product.maxHeight}mm allowed)")
+        }
+    }
+
+    // Width check — iterate panel counts until one fits
+    if (windowWidth > 0) {
+        for (panels in 1..maxOf(1, product.maxPanelCount)) {
+            val panelWidth = windowWidth.toDouble() / panels
+            if (panelWidth >= product.minWidth && panelWidth <= product.maxWidth) {
+                val msg = if (panels == 1) "Single panel — ${windowWidth}mm wide"
+                          else "$panels panels — each ~${panelWidth.roundToInt()}mm wide"
+                return CompatibilityResult(true, panels, msg)
+            }
+        }
+        return when {
+            windowWidth < product.minWidth ->
+                CompatibilityResult(false, 0, "Too narrow: ${windowWidth}mm (min ${product.minWidth}mm per panel)")
+            product.maxPanelCount <= 1 ->
+                CompatibilityResult(false, 0, "Too wide: ${windowWidth}mm exceeds ${product.maxWidth}mm (single panel only)")
+            else ->
+                CompatibilityResult(false, 0, "Cannot fit: ${windowWidth}mm cannot be split into " +
+                    "1–${product.maxPanelCount} panels each ${product.minWidth}–${product.maxWidth}mm wide")
         }
     }
 
