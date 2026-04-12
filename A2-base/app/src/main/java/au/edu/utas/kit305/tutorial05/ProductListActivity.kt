@@ -116,8 +116,8 @@ class ProductListActivity : AppCompatActivity() {
             spaceWidthMm = spaceWidthMm,
             spaceHeightMm = spaceHeightMm,
             productType = productType
-        ) { product ->
-            returnSelectedProduct(product)
+        ) { product, compat ->
+            returnSelectedProduct(product, compat)
         }
 
         loadProductsFromApi()
@@ -219,18 +219,11 @@ class ProductListActivity : AppCompatActivity() {
         return variants
     }
 
-    private fun returnSelectedProduct(product: Product) {
-        val panelCount = if (productType == "window" && product.maxWidth > 0) {
-            val rawPanels = Math.ceil(spaceWidthMm.toDouble() / product.maxWidth).toInt()
-            maxOf(1, minOf(rawPanels, product.maxPanelCount))
-        } else {
-            1
-        }
-
+    private fun returnSelectedProduct(product: Product, compat: CompatibilityResult) {
         val resultIntent = Intent()
         resultIntent.putExtra(RESULT_PRODUCT_ID, product.id)
         resultIntent.putExtra(RESULT_PRODUCT_NAME, product.name)
-        resultIntent.putExtra(RESULT_PANEL_COUNT, panelCount)
+        resultIntent.putExtra(RESULT_PANEL_COUNT, compat.panelCount)
         setResult(RESULT_OK, resultIntent)
         finish()
     }
@@ -249,7 +242,7 @@ class ProductListActivity : AppCompatActivity() {
         private val spaceWidthMm: Int,
         private val spaceHeightMm: Int,
         private val productType: String,
-        private val onSelect: (Product) -> Unit
+        private val onSelect: (Product, CompatibilityResult) -> Unit
     ) : RecyclerView.Adapter<ProductViewHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
@@ -283,7 +276,7 @@ class ProductListActivity : AppCompatActivity() {
                     if (compat.message.isNotBlank()) "✓ ${compat.message}" else "✓ Compatible"
                 holder.txtCompatibility.setTextColor(Color.parseColor("#2E7D32"))
                 holder.itemView.alpha = 1.0f
-                holder.itemView.setOnClickListener { onSelect(product) }
+                holder.itemView.setOnClickListener { onSelect(product, compat) }
             } else {
                 // Incompatible — show why in red and block selection
                 holder.txtCompatibility.text = "✗ ${compat.message}"
