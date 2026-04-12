@@ -52,6 +52,7 @@
 ## ✅ COMPLETED (continued)
 
 ### Feature 4 — Products: Selection (10 pts) ✅ DONE 2026-04-11
+### Feature 5 — Products: Constraints (10 pts) ✅ DONE 2026-04-12
 - **API URL:** `https://utasbot.dev/kit305_2026/product?category=window|floor`
 - Product list is loaded from the assignment API (not from Firestore product documents)
 - `ProductListActivity.kt` fetches API data using built-in `HttpURLConnection` + `org.json` parsing
@@ -75,17 +76,7 @@
 
 ## ❌ TODO (Remaining Features)
 
-### Feature 5 — Products: Constraints (10 pts)  **← START HERE NEXT SESSION**
-**Constraints to implement for WINDOW spaces only:**
-- `minHeight` / `maxHeight` — window height must be within range
-- `minWidth` / `maxWidth` — window width must be within range
-- **Panel Splitting:** if the window is wider than `maxWidth`, it can be split into panels (each panel width = window width ÷ panels), and each panel must still satisfy `minWidth` / `maxWidth`
-- `maxPanelCount` — number of panels cannot exceed this
-- Show **clear error messages** explaining WHY a product is incompatible
-
----
-
-### Feature 6 — Camera (10 pts)
+### Feature 6 — Camera (10 pts)  **← START HERE NEXT SESSION**
 **What to build:**
 - Add an image field to `Room` (or `Window`/`FloorSpace`) — store as a URL in Firestore (upload to Firebase Storage)
 - On `RoomDetails` (and optionally space detail screen), show an `ImageView`
