@@ -24,7 +24,11 @@ const val RESULT_PRODUCT_ID = "result_product_id"
 const val RESULT_PRODUCT_NAME = "result_product_name"
 const val RESULT_PANEL_COUNT = "result_panel_count"
 
-class ProductListActivity : AppCompatActivity() {
+data class CompatibilityResult(
+    val compatible: Boolean,
+    val panelCount: Int = 1,
+    val message: String = ""
+)class ProductListActivity : AppCompatActivity() {
 
     private lateinit var lstProducts: RecyclerView
     private lateinit var progressProducts: ProgressBar
