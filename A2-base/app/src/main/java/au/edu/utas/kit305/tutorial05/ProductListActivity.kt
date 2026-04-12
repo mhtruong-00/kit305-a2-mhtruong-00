@@ -234,6 +234,7 @@ class ProductListActivity : AppCompatActivity() {
         val txtDescription: TextView = itemView.findViewById(R.id.txtProductDescription)
         val txtPrice: TextView = itemView.findViewById(R.id.txtProductPrice)
         val txtConstraints: TextView = itemView.findViewById(R.id.txtProductConstraints)
+        val txtCompatibility: TextView = itemView.findViewById(R.id.txtCompatibility)
     }
 
     class ProductAdapter(
