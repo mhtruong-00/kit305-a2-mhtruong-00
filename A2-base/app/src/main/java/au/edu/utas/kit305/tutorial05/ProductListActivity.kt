@@ -35,6 +35,17 @@ fun checkCompatibility(product: Product, windowWidth: Int, windowHeight: Int): C
     if (product.category != "window") return CompatibilityResult(true, 1, "")
     // No dimensions recorded yet — allow selection
     if (windowWidth <= 0 && windowHeight <= 0) return CompatibilityResult(true, 1, "No dimensions set")
+
+    // Height check
+    if (windowHeight > 0) {
+        if (windowHeight < product.minHeight) {
+            return CompatibilityResult(false, 0, "Too short: ${windowHeight}mm (min ${product.minHeight}mm required)")
+        }
+        if (windowHeight > product.maxHeight) {
+            return CompatibilityResult(false, 0, "Too tall: ${windowHeight}mm (max ${product.maxHeight}mm allowed)")
+        }
+    }
+
     return CompatibilityResult(true, 1, "")
 }
 
