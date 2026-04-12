@@ -28,7 +28,17 @@ data class CompatibilityResult(
     val compatible: Boolean,
     val panelCount: Int = 1,
     val message: String = ""
-)class ProductListActivity : AppCompatActivity() {
+)
+
+fun checkCompatibility(product: Product, windowWidth: Int, windowHeight: Int): CompatibilityResult {
+    // Floor products have no size constraints
+    if (product.category != "window") return CompatibilityResult(true, 1, "")
+    // No dimensions recorded yet — allow selection
+    if (windowWidth <= 0 && windowHeight <= 0) return CompatibilityResult(true, 1, "No dimensions set")
+    return CompatibilityResult(true, 1, "")
+}
+
+class ProductListActivity : AppCompatActivity() {
 
     private lateinit var lstProducts: RecyclerView
     private lateinit var progressProducts: ProgressBar
