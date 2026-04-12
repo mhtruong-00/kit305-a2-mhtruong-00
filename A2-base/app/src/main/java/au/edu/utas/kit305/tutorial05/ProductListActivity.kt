@@ -1,6 +1,7 @@
 package au.edu.utas.kit305.tutorial05
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -274,7 +275,15 @@ class ProductListActivity : AppCompatActivity() {
             // Keep a built-in placeholder icon (no third-party image loader).
             holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
 
-            holder.itemView.setOnClickListener { onSelect(product) }
+            // Check if this product fits the window dimensions
+            val compat = checkCompatibility(product, spaceWidthMm, spaceHeightMm)
+            if (compat.compatible) {
+                holder.txtCompatibility.text =
+                    if (compat.message.isNotBlank()) "✓ ${compat.message}" else "✓ Compatible"
+                holder.txtCompatibility.setTextColor(Color.parseColor("#2E7D32"))
+                holder.itemView.alpha = 1.0f
+                holder.itemView.setOnClickListener { onSelect(product) }
+            }
         }
     }
 }
