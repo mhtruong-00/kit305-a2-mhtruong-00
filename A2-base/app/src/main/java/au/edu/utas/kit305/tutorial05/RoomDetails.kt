@@ -1,23 +1,35 @@
 package au.edu.utas.kit305.tutorial05
 
+import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.ktx.Firebase
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import java.io.File
+import java.net.URL
 
 const val ROOM_INDEX           = "Room_Index"
 const val HOUSE_ID_EXTRA       = "House_Id"
@@ -35,6 +47,9 @@ class RoomDetails : AppCompatActivity() {
     private lateinit var btnAddFloorSpace:    android.widget.Button
     private lateinit var lblWindowCount:      android.widget.TextView
     private lateinit var lblFloorSpaceCount:  android.widget.TextView
+    private lateinit var imgRoom:             ImageView
+    private lateinit var btnTakePhoto:        android.widget.Button
+    private lateinit var btnPickGallery:      android.widget.Button
 
     private val windowList     = mutableListOf<Window>()
     private val floorSpaceList = mutableListOf<FloorSpace>()
@@ -42,6 +57,8 @@ class RoomDetails : AppCompatActivity() {
     private var pendingWindowPos     = -1
     private var pendingFloorSpacePos = -1
     private lateinit var roomId: String
+    private var pendingCameraUri: Uri? = null
+    private var latestPhotoUrlRequested: String? = null
 
     // ─── Activity Result Launchers ───────────────────────────────────────────
 
@@ -66,6 +83,35 @@ class RoomDetails : AppCompatActivity() {
             pendingFloorSpacePos = -1
         }
 
+    private val cameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                launchCameraCapture()
+            } else {
+                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    private val takePictureLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+            val uri = pendingCameraUri
+            if (success && uri != null) {
+                imgRoom.visibility = View.VISIBLE
+                imgRoom.setImageURI(uri)
+                uploadRoomPhoto(uri)
+            }
+            pendingCameraUri = null
+        }
+
+    private val pickImageLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            if (uri != null) {
+                imgRoom.visibility = View.VISIBLE
+                imgRoom.setImageURI(uri)
+                uploadRoomPhoto(uri)
+            }
+        }
+
     // ─── Lifecycle ───────────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,12 +127,16 @@ class RoomDetails : AppCompatActivity() {
         btnAddFloorSpace   = findViewById(R.id.btnAddFloorSpace)
         lblWindowCount     = findViewById(R.id.lblWindowCount)
         lblFloorSpaceCount = findViewById(R.id.lblFloorSpaceCount)
+        imgRoom            = findViewById(R.id.imgRoom)
+        btnTakePhoto       = findViewById(R.id.btnTakePhoto)
+        btnPickGallery     = findViewById(R.id.btnPickGallery)
 
         roomId = intent.getStringExtra("room_id") ?: run { finish(); return }
         val roomName = intent.getStringExtra("room_name") ?: ""
 
         txtRoomName.setText(roomName)
         lblRoomTitle.text = roomName
+        loadRoom(roomId)
 
         lstWindows.layoutManager = LinearLayoutManager(this)
         lstWindows.adapter = MeasurementAdapter(
@@ -115,6 +165,8 @@ class RoomDetails : AppCompatActivity() {
 
         btnAddWindow.setOnClickListener     { addWindow(roomId) }
         btnAddFloorSpace.setOnClickListener { addFloorSpace(roomId) }
+        btnTakePhoto.setOnClickListener { requestCameraPermissionAndCapture() }
+        btnPickGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
 
         btnSaveRoom.setOnClickListener {
             val name = txtRoomName.text.toString().trim()
@@ -124,6 +176,113 @@ class RoomDetails : AppCompatActivity() {
                 .addOnSuccessListener { Log.d(FIREBASE_TAG, "Room updated"); finish() }
                 .addOnFailureListener { Log.e(FIREBASE_TAG, "Error updating room", it); lblRoomTitle.text = "Could not save room" }
         }
+    }
+
+    private fun loadRoom(roomId: String) {
+        Firebase.firestore.collection("rooms").document(roomId).get()
+            .addOnSuccessListener { doc ->
+                val room = doc.toObject<Room>() ?: return@addOnSuccessListener
+                txtRoomName.setText(room.name ?: "")
+                lblRoomTitle.text = room.name ?: "Room"
+                showRoomPhoto(room.photoUrl)
+            }
+            .addOnFailureListener { Log.e(FIREBASE_TAG, "Error loading room", it) }
+    }
+
+    private fun requestCameraPermissionAndCapture() {
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            launchCameraCapture()
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun launchCameraCapture() {
+        val uri = createTempImageUri() ?: run {
+            Toast.makeText(this, "Could not prepare camera file", Toast.LENGTH_SHORT).show()
+            return
+        }
+        pendingCameraUri = uri
+        takePictureLauncher.launch(uri)
+    }
+
+    private fun createTempImageUri(): Uri? {
+        return try {
+            val imageDir = File(cacheDir, "room_photos").apply { mkdirs() }
+            val imageFile = File.createTempFile("room_${roomId}_", ".jpg", imageDir)
+            FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.fileprovider", imageFile)
+        } catch (e: Exception) {
+            Log.e(FIREBASE_TAG, "Error creating temp image uri", e)
+            null
+        }
+    }
+
+    private fun uploadRoomPhoto(uri: Uri) {
+        val storageRef = Firebase.storage.reference
+            .child("room_photos")
+            .child(roomId)
+            .child("${System.currentTimeMillis()}.jpg")
+
+        storageRef.putFile(uri)
+            .continueWithTask { task ->
+                if (!task.isSuccessful) {
+                    task.exception?.let { throw it }
+                }
+                storageRef.downloadUrl
+            }
+            .addOnSuccessListener { downloadUrl ->
+                val url = downloadUrl.toString()
+                Firebase.firestore.collection("rooms").document(roomId)
+                    .update("photoUrl", url)
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "Room photo saved", Toast.LENGTH_SHORT).show()
+                        showRoomPhoto(url)
+                    }
+                    .addOnFailureListener {
+                        Log.e(FIREBASE_TAG, "Error saving photoUrl", it)
+                        Toast.makeText(this, "Photo uploaded but room update failed", Toast.LENGTH_SHORT).show()
+                    }
+            }
+            .addOnFailureListener {
+                Log.e(FIREBASE_TAG, "Error uploading room photo", it)
+                Toast.makeText(this, "Photo upload failed", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun showRoomPhoto(photoUrl: String?) {
+        if (photoUrl.isNullOrBlank()) {
+            latestPhotoUrlRequested = null
+            imgRoom.setImageDrawable(null)
+            imgRoom.visibility = View.GONE
+            return
+        }
+
+        imgRoom.visibility = View.VISIBLE
+        latestPhotoUrlRequested = photoUrl
+
+        Thread {
+            try {
+                val bitmap = URL(photoUrl).openStream().use { BitmapFactory.decodeStream(it) }
+                runOnUiThread {
+                    if (latestPhotoUrlRequested != photoUrl) return@runOnUiThread
+                    if (bitmap != null) {
+                        imgRoom.setImageBitmap(bitmap)
+                    } else {
+                        imgRoom.setImageDrawable(null)
+                        imgRoom.visibility = View.GONE
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(FIREBASE_TAG, "Error loading room photo", e)
+                runOnUiThread {
+                    if (latestPhotoUrlRequested == photoUrl) {
+                        imgRoom.setImageDrawable(null)
+                        imgRoom.visibility = View.GONE
+                    }
+                }
+            }
+        }.start()
     }
 
     // ─── Windows ─────────────────────────────────────────────────────────────
