@@ -1,5 +1,5 @@
 # KIT305 Assignment 2/3/4 — Progress Notes
-**Last updated:** 2026-04-11 (end of day)  
+**Last updated:** 2026-04-14 (session end)  
 **Project:** Android app (Kotlin + Firebase Firestore) — Window/Floor covering quote app
 
 ---
@@ -74,25 +74,26 @@
 
 ---
 
-## ❌ TODO (Remaining Features)
+## ✅ COMPLETED (new)
 
-### Feature 6 — Camera (10 pts)  **← START HERE NEXT SESSION**
-**What to build:**
-- Add an image field to `Room` (or `Window`/`FloorSpace`) — store as a URL in Firestore (upload to Firebase Storage)
-- On `RoomDetails` (and optionally space detail screen), show an `ImageView`
-- Button to pick image from **Gallery** OR **Camera** (both for HD+)
-- After picking, upload to **Firebase Storage** → get download URL → save to Firestore
-- Display the image whenever the screen is shown
-
-**Implementation steps:**
-1. Add Firebase Storage dependency to `app/build.gradle.kts`
-2. Request `CAMERA` permission at runtime
-3. Use `ActivityResultContracts.TakePicture` and `ActivityResultContracts.GetContent`
-4. Upload bitmap/uri to Storage, save download URL string
+### Feature 6 — Camera / Gallery room photo (10 pts) ✅ DONE 2026-04-14
+- `Room.kt` already includes `photoUrl` for Firestore persistence
+- `RoomDetails.kt` now supports:
+  - Camera capture (`ActivityResultContracts.TakePicture`)
+  - Gallery selection (`ActivityResultContracts.GetContent`)
+  - Runtime camera permission request
+  - Firebase Storage upload for selected image
+  - Saving image download URL back to Firestore `rooms/{roomId}.photoUrl`
+  - Loading and displaying existing room photo URL on screen open (no Glide)
+- `AndroidManifest.xml` now includes a `FileProvider` entry
+- New file: `res/xml/file_paths.xml` for camera temp file URI support
 
 ---
 
+## ❌ TODO (Remaining Features)
+
 ### Feature 7 — Quote Display (10 pts)
+**← START HERE NEXT SESSION**
 **What to build:**
 - A `QuoteActivity` that takes a `houseId`
 - Shows an itemized list: House → Rooms → Spaces with selected product, measurement, panel count, cost
@@ -148,8 +149,12 @@
 ## How to Resume
 When you return, say **"continue from progress notes"** and I will:
 1. Read this file
-2. Start **Feature 5 — Products: Constraints**
-3. Implement: min/max width/height checks, panel split logic, max panel count, and clear incompatibility messages (using API-loaded products)
+2. Start **Feature 7 — Quote Display**
+3. Implement steps:
+   - Add `QuoteActivity` and house-level quote screen
+   - Compute room totals + house total
+   - Include selected product names and measurements in itemized output
+   - Add exclude toggles (HD+ behavior)
 4. Continue with simple incremental commits and push after each part
 
 **Current stack policy state: Firebase + assignment API only (no Retrofit/OkHttp/Gson/Glide).**
