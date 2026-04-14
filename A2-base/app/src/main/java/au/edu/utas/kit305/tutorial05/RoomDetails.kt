@@ -27,7 +27,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
-import com.google.firebase.storage.ktx.storage
 import java.io.File
 import java.net.URL
 
@@ -37,6 +36,12 @@ const val WINDOW_ID_EXTRA      = "window_id"
 const val FLOOR_SPACE_ID_EXTRA = "floor_space_id"
 
 class RoomDetails : AppCompatActivity() {
+
+    private enum class PhotoTarget {
+        ROOM,
+        WINDOW,
+        FLOOR_SPACE
+    }
 
     private lateinit var txtRoomName:         android.widget.EditText
     private lateinit var lblRoomTitle:        android.widget.TextView
@@ -59,6 +64,8 @@ class RoomDetails : AppCompatActivity() {
     private lateinit var roomId: String
     private var pendingCameraUri: Uri? = null
     private var latestPhotoUrlRequested: String? = null
+    private var currentPhotoTarget: PhotoTarget = PhotoTarget.ROOM
+    private var currentPhotoItemPos: Int = -1
 
     // ─── Activity Result Launchers ───────────────────────────────────────────
 
@@ -96,9 +103,7 @@ class RoomDetails : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
             val uri = pendingCameraUri
             if (success && uri != null) {
-                imgRoom.visibility = View.VISIBLE
-                imgRoom.setImageURI(uri)
-                uploadRoomPhoto(uri)
+                handleSelectedPhoto(uri)
             }
             pendingCameraUri = null
         }
@@ -106,9 +111,7 @@ class RoomDetails : AppCompatActivity() {
     private val pickImageLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             if (uri != null) {
-                imgRoom.visibility = View.VISIBLE
-                imgRoom.setImageURI(uri)
-                uploadRoomPhoto(uri)
+                handleSelectedPhoto(uri)
             }
         }
 
@@ -146,7 +149,9 @@ class RoomDetails : AppCompatActivity() {
             productFn       = { w -> w.selectedProductName },
             onEdit          = { pos -> openWindowEdit(pos) },
             onDelete        = { pos -> deleteWindow(pos) },
-            onSelectProduct = { pos -> launchWindowProductPicker(pos) }
+            onSelectProduct = { pos -> launchWindowProductPicker(pos) },
+            onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.WINDOW, pos) },
+            onGallery       = { pos -> startMeasurementGallery(PhotoTarget.WINDOW, pos) }
         )
 
         lstFloorSpaces.layoutManager = LinearLayoutManager(this)
@@ -157,7 +162,9 @@ class RoomDetails : AppCompatActivity() {
             productFn       = { f -> f.selectedProductName },
             onEdit          = { pos -> openFloorSpaceEdit(pos) },
             onDelete        = { pos -> deleteFloorSpace(pos) },
-            onSelectProduct = { pos -> launchFloorProductPicker(pos) }
+            onSelectProduct = { pos -> launchFloorProductPicker(pos) },
+            onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.FLOOR_SPACE, pos) },
+            onGallery       = { pos -> startMeasurementGallery(PhotoTarget.FLOOR_SPACE, pos) }
         )
 
         loadWindows(roomId)
@@ -165,8 +172,14 @@ class RoomDetails : AppCompatActivity() {
 
         btnAddWindow.setOnClickListener     { addWindow(roomId) }
         btnAddFloorSpace.setOnClickListener { addFloorSpace(roomId) }
-        btnTakePhoto.setOnClickListener { requestCameraPermissionAndCapture() }
-        btnPickGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
+        btnTakePhoto.setOnClickListener {
+            setPhotoTarget(PhotoTarget.ROOM)
+            requestCameraPermissionAndCapture()
+        }
+        btnPickGallery.setOnClickListener {
+            setPhotoTarget(PhotoTarget.ROOM)
+            pickImageLauncher.launch("image/*")
+        }
 
         btnSaveRoom.setOnClickListener {
             val name = txtRoomName.text.toString().trim()
@@ -207,11 +220,39 @@ class RoomDetails : AppCompatActivity() {
         takePictureLauncher.launch(uri)
     }
 
+    private fun setPhotoTarget(target: PhotoTarget, itemPos: Int = -1) {
+        currentPhotoTarget = target
+        currentPhotoItemPos = itemPos
+    }
+
+    private fun startMeasurementCamera(target: PhotoTarget, pos: Int) {
+        setPhotoTarget(target, pos)
+        requestCameraPermissionAndCapture()
+    }
+
+    private fun startMeasurementGallery(target: PhotoTarget, pos: Int) {
+        setPhotoTarget(target, pos)
+        pickImageLauncher.launch("image/*")
+    }
+
+    private fun handleSelectedPhoto(uri: Uri) {
+        when (currentPhotoTarget) {
+            PhotoTarget.ROOM -> {
+                imgRoom.visibility = View.VISIBLE
+                imgRoom.setImageURI(uri)
+                uploadRoomPhoto(uri)
+            }
+            PhotoTarget.WINDOW, PhotoTarget.FLOOR_SPACE -> {
+                Toast.makeText(this, "Photo selected", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun createTempImageUri(): Uri? {
         return try {
             val imageDir = File(cacheDir, "room_photos").apply { mkdirs() }
             val imageFile = File.createTempFile("room_${roomId}_", ".jpg", imageDir)
-            FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.fileprovider", imageFile)
+            FileProvider.getUriForFile(this, "${applicationContext.packageName}.fileprovider", imageFile)
         } catch (e: Exception) {
             Log.e(FIREBASE_TAG, "Error creating temp image uri", e)
             null
@@ -219,35 +260,9 @@ class RoomDetails : AppCompatActivity() {
     }
 
     private fun uploadRoomPhoto(uri: Uri) {
-        val storageRef = Firebase.storage.reference
-            .child("room_photos")
-            .child(roomId)
-            .child("${System.currentTimeMillis()}.jpg")
-
-        storageRef.putFile(uri)
-            .continueWithTask { task ->
-                if (!task.isSuccessful) {
-                    task.exception?.let { throw it }
-                }
-                storageRef.downloadUrl
-            }
-            .addOnSuccessListener { downloadUrl ->
-                val url = downloadUrl.toString()
-                Firebase.firestore.collection("rooms").document(roomId)
-                    .update("photoUrl", url)
-                    .addOnSuccessListener {
-                        Toast.makeText(this, "Room photo saved", Toast.LENGTH_SHORT).show()
-                        showRoomPhoto(url)
-                    }
-                    .addOnFailureListener {
-                        Log.e(FIREBASE_TAG, "Error saving photoUrl", it)
-                        Toast.makeText(this, "Photo uploaded but room update failed", Toast.LENGTH_SHORT).show()
-                    }
-            }
-            .addOnFailureListener {
-                Log.e(FIREBASE_TAG, "Error uploading room photo", it)
-                Toast.makeText(this, "Photo upload failed", Toast.LENGTH_SHORT).show()
-            }
+        // Persistence implementation is added in the next commit.
+        Log.d(FIREBASE_TAG, "Room photo selected: $uri")
+        Toast.makeText(this, "Photo selected", Toast.LENGTH_SHORT).show()
     }
 
     private fun showRoomPhoto(photoUrl: String?) {
@@ -483,6 +498,8 @@ class RoomDetails : AppCompatActivity() {
         val btnEdit:    Button   = root.findViewById(R.id.btnMeasurementEdit)
         val btnDelete:  Button   = root.findViewById(R.id.btnMeasurementDelete)
         val btnProduct: Button   = root.findViewById(R.id.btnSelectProduct)
+        val btnPhoto:   Button   = root.findViewById(R.id.btnMeasurementPhoto)
+        val btnGallery: Button   = root.findViewById(R.id.btnMeasurementGallery)
     }
 
     class MeasurementAdapter<T>(
@@ -492,7 +509,9 @@ class RoomDetails : AppCompatActivity() {
         private val productFn:       (T) -> String?,
         private val onEdit:          (Int) -> Unit,
         private val onDelete:        (Int) -> Unit,
-        private val onSelectProduct: (Int) -> Unit
+        private val onSelectProduct: (Int) -> Unit,
+        private val onPhoto:         (Int) -> Unit,
+        private val onGallery:       (Int) -> Unit
     ) : RecyclerView.Adapter<MeasurementHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MeasurementHolder {
@@ -517,6 +536,9 @@ class RoomDetails : AppCompatActivity() {
 
             holder.btnEdit.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onEdit(p) }
             holder.btnDelete.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onDelete(p) }
-            holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }        }
+            holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }
+            holder.btnPhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onPhoto(p) }
+            holder.btnGallery.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onGallery(p) }
+        }
     }
 }
