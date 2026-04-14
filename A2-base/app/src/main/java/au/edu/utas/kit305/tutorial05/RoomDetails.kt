@@ -4,9 +4,11 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -27,8 +29,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URL
+import kotlin.math.roundToInt
 
 const val ROOM_INDEX           = "Room_Index"
 const val HOUSE_ID_EXTRA       = "House_Id"
@@ -55,6 +59,7 @@ class RoomDetails : AppCompatActivity() {
     private lateinit var imgRoom:             ImageView
     private lateinit var btnTakePhoto:        android.widget.Button
     private lateinit var btnPickGallery:      android.widget.Button
+    private lateinit var btnRemoveRoomPhoto:  android.widget.Button
 
     private val windowList     = mutableListOf<Window>()
     private val floorSpaceList = mutableListOf<FloorSpace>()
@@ -63,7 +68,6 @@ class RoomDetails : AppCompatActivity() {
     private var pendingFloorSpacePos = -1
     private lateinit var roomId: String
     private var pendingCameraUri: Uri? = null
-    private var latestPhotoUrlRequested: String? = null
     private var currentPhotoTarget: PhotoTarget = PhotoTarget.ROOM
     private var currentPhotoItemPos: Int = -1
 
@@ -133,6 +137,8 @@ class RoomDetails : AppCompatActivity() {
         imgRoom            = findViewById(R.id.imgRoom)
         btnTakePhoto       = findViewById(R.id.btnTakePhoto)
         btnPickGallery     = findViewById(R.id.btnPickGallery)
+        btnRemoveRoomPhoto = findViewById(R.id.btnRemoveRoomPhoto)
+        btnRemoveRoomPhoto.visibility = View.GONE
 
         roomId = intent.getStringExtra("room_id") ?: run { finish(); return }
         val roomName = intent.getStringExtra("room_name") ?: ""
@@ -147,11 +153,13 @@ class RoomDetails : AppCompatActivity() {
             nameFn          = { w -> w.name ?: "Unnamed" },
             dimsFn          = { w -> "${w.widthMm}mm × ${w.heightMm}mm" },
             productFn       = { w -> w.selectedProductName },
+            photoFn         = { w -> w.photoBase64 },
             onEdit          = { pos -> openWindowEdit(pos) },
             onDelete        = { pos -> deleteWindow(pos) },
             onSelectProduct = { pos -> launchWindowProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.WINDOW, pos) },
-            onGallery       = { pos -> startMeasurementGallery(PhotoTarget.WINDOW, pos) }
+            onGallery       = { pos -> startMeasurementGallery(PhotoTarget.WINDOW, pos) },
+            onRemovePhoto   = { pos -> removeMeasurementPhoto(PhotoTarget.WINDOW, pos) }
         )
 
         lstFloorSpaces.layoutManager = LinearLayoutManager(this)
@@ -160,11 +168,13 @@ class RoomDetails : AppCompatActivity() {
             nameFn          = { f -> f.name ?: "Unnamed" },
             dimsFn          = { f -> "${f.widthMm}mm × ${f.depthMm}mm" },
             productFn       = { f -> f.selectedProductName },
+            photoFn         = { f -> f.photoBase64 },
             onEdit          = { pos -> openFloorSpaceEdit(pos) },
             onDelete        = { pos -> deleteFloorSpace(pos) },
             onSelectProduct = { pos -> launchFloorProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.FLOOR_SPACE, pos) },
-            onGallery       = { pos -> startMeasurementGallery(PhotoTarget.FLOOR_SPACE, pos) }
+            onGallery       = { pos -> startMeasurementGallery(PhotoTarget.FLOOR_SPACE, pos) },
+            onRemovePhoto   = { pos -> removeMeasurementPhoto(PhotoTarget.FLOOR_SPACE, pos) }
         )
 
         loadWindows(roomId)
@@ -179,6 +189,9 @@ class RoomDetails : AppCompatActivity() {
         btnPickGallery.setOnClickListener {
             setPhotoTarget(PhotoTarget.ROOM)
             pickImageLauncher.launch("image/*")
+        }
+        btnRemoveRoomPhoto.setOnClickListener {
+            removeMeasurementPhoto(PhotoTarget.ROOM, -1)
         }
 
         btnSaveRoom.setOnClickListener {
@@ -197,7 +210,7 @@ class RoomDetails : AppCompatActivity() {
                 val room = doc.toObject<Room>() ?: return@addOnSuccessListener
                 txtRoomName.setText(room.name ?: "")
                 lblRoomTitle.text = room.name ?: "Room"
-                showRoomPhoto(room.photoUrl)
+                showRoomPhoto(room.photoBase64, room.photoUrl)
             }
             .addOnFailureListener { Log.e(FIREBASE_TAG, "Error loading room", it) }
     }
@@ -242,9 +255,8 @@ class RoomDetails : AppCompatActivity() {
                 imgRoom.setImageURI(uri)
                 uploadRoomPhoto(uri)
             }
-            PhotoTarget.WINDOW, PhotoTarget.FLOOR_SPACE -> {
-                Toast.makeText(this, "Photo selected", Toast.LENGTH_SHORT).show()
-            }
+            PhotoTarget.WINDOW -> saveWindowPhoto(currentPhotoItemPos, uri)
+            PhotoTarget.FLOOR_SPACE -> saveFloorSpacePhoto(currentPhotoItemPos, uri)
         }
     }
 
@@ -260,41 +272,186 @@ class RoomDetails : AppCompatActivity() {
     }
 
     private fun uploadRoomPhoto(uri: Uri) {
-        // Persistence implementation is added in the next commit.
-        Log.d(FIREBASE_TAG, "Room photo selected: $uri")
-        Toast.makeText(this, "Photo selected", Toast.LENGTH_SHORT).show()
+        val base64 = encodeImageToBase64(uri)
+        if (base64 == null) {
+            Toast.makeText(this, "Photo processing failed", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Firebase.firestore.collection("rooms").document(roomId)
+            .update(mapOf("photoBase64" to base64, "photoUrl" to ""))
+            .addOnSuccessListener {
+                Toast.makeText(this, "Room photo saved", Toast.LENGTH_SHORT).show()
+                showRoomPhoto(base64, null)
+            }
+            .addOnFailureListener {
+                Log.e(FIREBASE_TAG, "Error saving photo in Firestore", it)
+                Toast.makeText(this, "Photo save failed: ${it.message ?: "unknown"}", Toast.LENGTH_LONG).show()
+            }
     }
 
-    private fun showRoomPhoto(photoUrl: String?) {
+    private fun saveWindowPhoto(pos: Int, uri: Uri) {
+        if (pos !in windowList.indices) return
+        val base64 = encodeImageToBase64(uri) ?: run {
+            Toast.makeText(this, "Photo processing failed", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val window = windowList[pos]
+        val windowId = window.id ?: return
+
+        Firebase.firestore.collection("windows").document(windowId)
+            .update("photoBase64", base64)
+            .addOnSuccessListener {
+                window.photoBase64 = base64
+                lstWindows.adapter?.notifyItemChanged(pos)
+                Toast.makeText(this, "Window photo saved", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Log.e(FIREBASE_TAG, "Error saving window photo", it)
+                Toast.makeText(this, "Window photo save failed", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun saveFloorSpacePhoto(pos: Int, uri: Uri) {
+        if (pos !in floorSpaceList.indices) return
+        val base64 = encodeImageToBase64(uri) ?: run {
+            Toast.makeText(this, "Photo processing failed", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val floorSpace = floorSpaceList[pos]
+        val floorSpaceId = floorSpace.id ?: return
+
+        Firebase.firestore.collection("floorspaces").document(floorSpaceId)
+            .update("photoBase64", base64)
+            .addOnSuccessListener {
+                floorSpace.photoBase64 = base64
+                lstFloorSpaces.adapter?.notifyItemChanged(pos)
+                Toast.makeText(this, "Floor photo saved", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Log.e(FIREBASE_TAG, "Error saving floor photo", it)
+                Toast.makeText(this, "Floor photo save failed", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun removeMeasurementPhoto(target: PhotoTarget, pos: Int) {
+        when (target) {
+            PhotoTarget.ROOM -> {
+                Firebase.firestore.collection("rooms").document(roomId)
+                    .update(mapOf("photoBase64" to "", "photoUrl" to ""))
+                    .addOnSuccessListener {
+                        imgRoom.setImageDrawable(null)
+                        imgRoom.visibility = View.GONE
+                        btnRemoveRoomPhoto.visibility = View.GONE
+                    }
+                return
+            }
+            PhotoTarget.WINDOW -> {
+                if (pos !in windowList.indices) return
+                val item = windowList[pos]
+                val itemId = item.id ?: return
+                Firebase.firestore.collection("windows").document(itemId)
+                    .update("photoBase64", "")
+                    .addOnSuccessListener {
+                        item.photoBase64 = null
+                        lstWindows.adapter?.notifyItemChanged(pos)
+                    }
+                    .addOnFailureListener { Log.e(FIREBASE_TAG, "Error removing window photo", it) }
+            }
+            PhotoTarget.FLOOR_SPACE -> {
+                if (pos !in floorSpaceList.indices) return
+                val item = floorSpaceList[pos]
+                val itemId = item.id ?: return
+                Firebase.firestore.collection("floorspaces").document(itemId)
+                    .update("photoBase64", "")
+                    .addOnSuccessListener {
+                        item.photoBase64 = null
+                        lstFloorSpaces.adapter?.notifyItemChanged(pos)
+                    }
+                    .addOnFailureListener { Log.e(FIREBASE_TAG, "Error removing floor photo", it) }
+            }
+        }
+    }
+
+    private fun encodeImageToBase64(uri: Uri): String? {
+        return try {
+            val bitmap = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
+            val bytes = compressBitmap(bitmap)
+            Base64.encodeToString(bytes, Base64.DEFAULT)
+        } catch (e: Exception) {
+            Log.e(FIREBASE_TAG, "Error encoding photo", e)
+            null
+        }
+    }
+
+    private fun compressBitmap(bitmap: Bitmap): ByteArray {
+        val scaledBitmap = scaleBitmap(bitmap, 1280)
+        val output = ByteArrayOutputStream()
+        var quality = 85
+        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
+
+        // Keep comfortably under Firestore doc size constraints after Base64 expansion.
+        while (output.size() > 250_000 && quality > 25) {
+            output.reset()
+            quality -= 10
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
+        }
+        return output.toByteArray()
+    }
+
+    private fun scaleBitmap(bitmap: Bitmap, maxDimension: Int): Bitmap {
+        val largestSide = maxOf(bitmap.width, bitmap.height)
+        if (largestSide <= maxDimension) return bitmap
+
+        val scale = maxDimension.toFloat() / largestSide.toFloat()
+        val width = (bitmap.width * scale).roundToInt()
+        val height = (bitmap.height * scale).roundToInt()
+        return Bitmap.createScaledBitmap(bitmap, width, height, true)
+    }
+
+    private fun showRoomPhoto(photoBase64: String?, photoUrl: String?) {
+        if (!photoBase64.isNullOrBlank()) {
+            try {
+                val bytes = Base64.decode(photoBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (bitmap != null) {
+                    imgRoom.setImageBitmap(bitmap)
+                    imgRoom.visibility = View.VISIBLE
+                    btnRemoveRoomPhoto.visibility = View.VISIBLE
+                    return
+                }
+            } catch (e: Exception) {
+                Log.e(FIREBASE_TAG, "Error decoding base64 room photo", e)
+            }
+        }
+
         if (photoUrl.isNullOrBlank()) {
-            latestPhotoUrlRequested = null
             imgRoom.setImageDrawable(null)
             imgRoom.visibility = View.GONE
+            btnRemoveRoomPhoto.visibility = View.GONE
             return
         }
 
         imgRoom.visibility = View.VISIBLE
-        latestPhotoUrlRequested = photoUrl
-
         Thread {
             try {
                 val bitmap = URL(photoUrl).openStream().use { BitmapFactory.decodeStream(it) }
                 runOnUiThread {
-                    if (latestPhotoUrlRequested != photoUrl) return@runOnUiThread
                     if (bitmap != null) {
                         imgRoom.setImageBitmap(bitmap)
+                        btnRemoveRoomPhoto.visibility = View.VISIBLE
                     } else {
                         imgRoom.setImageDrawable(null)
                         imgRoom.visibility = View.GONE
+                        btnRemoveRoomPhoto.visibility = View.GONE
                     }
                 }
             } catch (e: Exception) {
                 Log.e(FIREBASE_TAG, "Error loading room photo", e)
                 runOnUiThread {
-                    if (latestPhotoUrlRequested == photoUrl) {
-                        imgRoom.setImageDrawable(null)
-                        imgRoom.visibility = View.GONE
-                    }
+                    imgRoom.setImageDrawable(null)
+                    imgRoom.visibility = View.GONE
+                    btnRemoveRoomPhoto.visibility = View.GONE
                 }
             }
         }.start()
@@ -495,11 +652,13 @@ class RoomDetails : AppCompatActivity() {
         val txtName:    TextView = root.findViewById(R.id.txtMeasurementName)
         val txtDims:    TextView = root.findViewById(R.id.txtMeasurementDims)
         val txtProduct: TextView = root.findViewById(R.id.txtSelectedProduct)
+        val imgPhoto:   ImageView = root.findViewById(R.id.imgMeasurementPhoto)
         val btnEdit:    Button   = root.findViewById(R.id.btnMeasurementEdit)
         val btnDelete:  Button   = root.findViewById(R.id.btnMeasurementDelete)
         val btnProduct: Button   = root.findViewById(R.id.btnSelectProduct)
         val btnPhoto:   Button   = root.findViewById(R.id.btnMeasurementPhoto)
-        val btnGallery: Button   = root.findViewById(R.id.btnMeasurementGallery)
+        val btnGallery: Button = root.findViewById(R.id.btnMeasurementGallery)
+        val btnRemovePhoto: Button = root.findViewById(R.id.btnMeasurementRemovePhoto)
     }
 
     class MeasurementAdapter<T>(
@@ -507,11 +666,13 @@ class RoomDetails : AppCompatActivity() {
         private val nameFn:          (T) -> String,
         private val dimsFn:          (T) -> String,
         private val productFn:       (T) -> String?,
+        private val photoFn:         (T) -> String?,
         private val onEdit:          (Int) -> Unit,
         private val onDelete:        (Int) -> Unit,
         private val onSelectProduct: (Int) -> Unit,
         private val onPhoto:         (Int) -> Unit,
-        private val onGallery:       (Int) -> Unit
+        private val onGallery:       (Int) -> Unit,
+        private val onRemovePhoto:   (Int) -> Unit
     ) : RecyclerView.Adapter<MeasurementHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MeasurementHolder {
@@ -528,6 +689,7 @@ class RoomDetails : AppCompatActivity() {
             holder.txtDims.text = dimsFn(item)
             val prod = productFn(item)
             holder.txtProduct.text = if (!prod.isNullOrBlank()) "Product: $prod" else "No product selected"
+            bindPhoto(holder.imgPhoto, holder.btnRemovePhoto, photoFn(item))
 
             holder.root.setOnClickListener {
                 val p = holder.bindingAdapterPosition
@@ -539,6 +701,34 @@ class RoomDetails : AppCompatActivity() {
             holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }
             holder.btnPhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onPhoto(p) }
             holder.btnGallery.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onGallery(p) }
+            holder.btnRemovePhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onRemovePhoto(p) }
+        }
+
+        private fun bindPhoto(imageView: ImageView, removeButton: Button, photoBase64: String?) {
+            if (photoBase64.isNullOrBlank()) {
+                imageView.setImageDrawable(null)
+                imageView.visibility = View.GONE
+                removeButton.visibility = View.GONE
+                return
+            }
+
+            try {
+                val bytes = Base64.decode(photoBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (bitmap != null) {
+                    imageView.setImageBitmap(bitmap)
+                    imageView.visibility = View.VISIBLE
+                    removeButton.visibility = View.VISIBLE
+                } else {
+                    imageView.setImageDrawable(null)
+                    imageView.visibility = View.GONE
+                    removeButton.visibility = View.GONE
+                }
+            } catch (_: Exception) {
+                imageView.setImageDrawable(null)
+                imageView.visibility = View.GONE
+                removeButton.visibility = View.GONE
+            }
         }
     }
 }
