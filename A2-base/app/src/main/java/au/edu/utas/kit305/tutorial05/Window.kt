@@ -10,5 +10,6 @@ class Window(
     var heightMm: Int = 0,
     var selectedProductId: String? = null,
     var selectedProductName: String? = null,
-    var panelCount: Int = 1
+    var panelCount: Int = 1,
+    var photoBase64: String? = null
 )

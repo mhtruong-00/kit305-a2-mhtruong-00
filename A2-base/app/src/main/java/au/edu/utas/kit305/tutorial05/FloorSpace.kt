@@ -9,5 +9,6 @@ class FloorSpace(
     var widthMm: Int = 0,
     var depthMm: Int = 0,
     var selectedProductId: String? = null,
-    var selectedProductName: String? = null
+    var selectedProductName: String? = null,
+    var photoBase64: String? = null
 )

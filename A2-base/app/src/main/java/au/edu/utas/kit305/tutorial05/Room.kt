@@ -6,6 +6,7 @@ class Room(
     @get:Exclude var id: String? = null,
     var houseId: String? = null,
     var name: String? = null,
-    var photoUrl: String? = null
+    var photoUrl: String? = null,
+    var photoBase64: String? = null
 )
 
