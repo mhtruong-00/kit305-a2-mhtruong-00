@@ -1,9 +1,6 @@
 package au.edu.utas.kit305.tutorial05
 
-import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -22,39 +19,6 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.roundToInt
-
-/** Simple in-memory image cache — no third-party libraries. */
-object ImageCache {
-    private val cache = HashMap<String, Bitmap>()
-
-    fun load(url: String, imageView: ImageView) {
-        imageView.setImageResource(android.R.drawable.ic_menu_gallery) // placeholder
-        imageView.tag = url
-
-        val cached = cache[url]
-        if (cached != null) {
-            imageView.setImageBitmap(cached)
-            return
-        }
-
-        Thread {
-            try {
-                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 8000
-                    readTimeout = 8000
-                }
-                val bmp = BitmapFactory.decodeStream(conn.inputStream)
-                conn.disconnect()
-                if (bmp != null) {
-                    cache[url] = bmp
-                    (imageView.context as? Activity)?.runOnUiThread {
-                        if (imageView.tag == url) imageView.setImageBitmap(bmp)
-                    }
-                }
-            } catch (_: Exception) { }
-        }.start()
-    }
-}
 
 const val EXTRA_PRODUCT_TYPE = "product_type"
 const val EXTRA_SPACE_WIDTH = "space_width"
@@ -302,12 +266,8 @@ class ProductListActivity : AppCompatActivity() {
                 "Floor covering"
             }
 
-            // Load product image from URL (built-in HttpURLConnection + BitmapFactory, no Glide)
-            if (!product.imageUrl.isNullOrBlank()) {
-                ImageCache.load(product.imageUrl!!, holder.imgProduct)
-            } else {
-                holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
-            }
+            // Keep a built-in placeholder icon (no third-party image loader).
+            holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
 
             // Check if this product fits the window dimensions
             val compat = checkCompatibility(product, spaceWidthMm, spaceHeightMm)
