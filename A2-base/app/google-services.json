@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "502315951774",
     "project_id": "test-minh-tute-5",
-    "storage_bucket": "assignment-2-ce76b.firebasestorage.app"
+    "storage_bucket": "test-minh-tute-5.firebasestorage.app"
   },
   "client": [
     {
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCJPXIsc9h5iFtxOyXFdz7KruvhJvJFhes"
+          "current_key": "AIzaSyBazw2lXrF_KVilPJ1WOuXrjPJmJftgtHg"
         }
       ],
       "services": {
