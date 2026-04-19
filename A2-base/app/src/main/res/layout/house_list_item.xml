@@ -35,19 +35,36 @@
             android:text="Address" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/btnViewQuoteHouse"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:text="@string/view_quote" />
+        android:orientation="vertical">
 
-    <Button
-        android:id="@+id/btnDeleteHouse"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/delete"
-        android:textColor="#D32F2F" />
+        <Button
+            android:id="@+id/btnEditHouse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/edit_house_action" />
+
+        <Button
+            android:id="@+id/btnCreateRoomHouse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/create_room_action" />
+
+        <Button
+            android:id="@+id/btnViewQuoteHouse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/view_quote" />
+
+        <Button
+            android:id="@+id/btnDeleteHouse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/delete"
+            android:textColor="#D32F2F" />
+    </LinearLayout>
 
 </LinearLayout>
 

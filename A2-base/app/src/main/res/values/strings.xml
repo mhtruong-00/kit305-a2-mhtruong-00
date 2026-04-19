@@ -22,6 +22,7 @@
     <string name="delete_house_action">Delete House</string>
     <string name="edit_house_action">Edit House</string>
     <string name="edit_room_action">Edit</string>
+    <string name="create_room_action">Create Room</string>
     <string name="open_rooms_action">Open Rooms</string>
     <string name="label_house_rooms">House Rooms</string>
     <string name="view_quote">View Quote</string>
