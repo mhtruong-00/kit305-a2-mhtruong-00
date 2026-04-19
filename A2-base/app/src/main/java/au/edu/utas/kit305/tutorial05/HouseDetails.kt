@@ -49,6 +49,7 @@ class HouseDetails : AppCompatActivity() {
 
         ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
         ui.btnAddRoom.setOnClickListener { addRoom(houseId) }
+        ui.btnViewQuote.setOnClickListener { openQuote() }
 
         loadRooms(houseId)
     }
@@ -64,6 +65,14 @@ class HouseDetails : AppCompatActivity() {
         val i = Intent(this, RoomDetails::class.java)
         i.putExtra("room_id", room.id)
         i.putExtra("room_name", room.name ?: "")
+        startActivity(i)
+    }
+
+    private fun openQuote() {
+        val currentHouseId = houseId ?: return
+        val i = Intent(this, QuoteActivity::class.java)
+        i.putExtra(HOUSE_ID_EXTRA, currentHouseId)
+        i.putExtra(HOUSE_NAME_EXTRA, intent.getStringExtra(HOUSE_NAME_EXTRA) ?: getString(R.string.quote_title_default))
         startActivity(i)
     }
 

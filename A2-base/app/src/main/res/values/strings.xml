@@ -23,4 +23,7 @@
     <string name="edit_house_action">Edit House</string>
     <string name="open_rooms_action">Open Rooms</string>
     <string name="label_house_rooms">House Rooms</string>
+    <string name="view_quote">View Quote</string>
+    <string name="quote_title_default">House Quote</string>
+    <string name="quote_loading">Loading quote…</string>
 </resources>
