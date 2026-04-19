@@ -8,7 +8,7 @@
     android:paddingTop="8dp"
     android:paddingBottom="8dp">
 
-    <!-- Name + action buttons row -->
+    <!-- Name and dimensions -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -36,20 +36,31 @@
                 android:textColor="@android:color/darker_gray" />
         </LinearLayout>
 
+    </LinearLayout>
+
+    <!-- Edit/Delete actions (always visible) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
         <Button
             android:id="@+id/btnMeasurementEdit"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Edit"
-            style="@style/Widget.AppCompat.Button.Borderless" />
+            android:layout_weight="1"
+            android:text="Edit" />
 
         <Button
             android:id="@+id/btnMeasurementDelete"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
             android:text="Delete"
-            android:textColor="#D32F2F"
-            style="@style/Widget.AppCompat.Button.Borderless" />
+            android:textColor="#D32F2F" />
     </LinearLayout>
 
     <!-- Product selection row -->
