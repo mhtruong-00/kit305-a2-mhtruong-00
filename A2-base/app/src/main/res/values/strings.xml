@@ -26,4 +26,13 @@
     <string name="view_quote">View Quote</string>
     <string name="quote_title_default">House Quote</string>
     <string name="quote_loading">Loading quote…</string>
+    <string name="quote_address_missing">No address</string>
+    <string name="quote_no_rooms">No rooms added yet.</string>
+    <string name="quote_no_items">No windows or floor spaces added yet.</string>
+    <string name="quote_room_heading">Room: %1$s</string>
+    <string name="quote_window_line">Window — %1$s (%2$dmm × %3$dmm)</string>
+    <string name="quote_floor_line">Floor — %1$s (%2$dmm × %3$dmm)</string>
+    <string name="quote_product_line">Product: %1$s</string>
+    <string name="quote_product_basic_window">Basic window rate</string>
+    <string name="quote_product_basic_floor">Basic floor rate</string>
 </resources>
