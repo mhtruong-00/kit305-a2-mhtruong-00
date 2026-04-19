@@ -45,6 +45,7 @@ class HouseDetails : AppCompatActivity() {
             rooms = roomList,
             onClick = { position -> openRoomDetails(position) },
             onEdit = { position -> openRoomDetails(position) },
+            onDelete = { position -> promptDeleteRoom(position) },
             onLongPress = { position -> promptDeleteRoom(position) }
         )
 
@@ -151,6 +152,7 @@ class HouseDetails : AppCompatActivity() {
         private val rooms: MutableList<Room>,
         private val onClick: (Int) -> Unit,
         private val onEdit: (Int) -> Unit,
+        private val onDelete: (Int) -> Unit,
         private val onLongPress: (Int) -> Unit
     ) : RecyclerView.Adapter<RoomHolder>() {
 
@@ -173,6 +175,10 @@ class HouseDetails : AppCompatActivity() {
             holder.ui.btnEditRoom.setOnClickListener {
                 val p = holder.bindingAdapterPosition
                 if (p != RecyclerView.NO_POSITION) onEdit(p)
+            }
+            holder.ui.btnDeleteRoom.setOnClickListener {
+                val p = holder.bindingAdapterPosition
+                if (p != RecyclerView.NO_POSITION) onDelete(p)
             }
             holder.ui.root.setOnLongClickListener {
                 val p = holder.bindingAdapterPosition

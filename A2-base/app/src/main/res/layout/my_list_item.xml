@@ -24,6 +24,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/edit_room_action" />
+
+        <Button
+            android:id="@+id/btnDeleteRoom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/delete"
+            android:textColor="#D32F2F" />
     </LinearLayout>
 
     <TextView
