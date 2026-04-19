@@ -35,4 +35,13 @@
     <string name="quote_product_line">Product: %1$s</string>
     <string name="quote_product_basic_window">Basic window rate</string>
     <string name="quote_product_basic_floor">Basic floor rate</string>
+    <string name="quote_total_format">House total: $%1$.2f</string>
+    <string name="quote_room_subtotal_format">Items subtotal: $%1$.2f</string>
+    <string name="quote_room_labour_format">Labour: $%1$.2f</string>
+    <string name="quote_room_total_format">Room total: $%1$.2f</string>
+    <string name="quote_item_cost_format">Cost: $%1$.2f</string>
+    <string name="quote_item_area_format">Area: %1$.2f m²</string>
+    <string name="quote_item_rate_format">Rate: $%1$.2f / m²</string>
+    <string name="quote_item_panels_format">Panels: %1$d</string>
+    <string name="quote_using_defaults">Product prices could not be loaded from the API. Using default rates for this quote.</string>
 </resources>

@@ -9,8 +9,18 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
 import com.google.firebase.ktx.Firebase
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class QuoteActivity : AppCompatActivity() {
+
+    companion object {
+        private const val DEFAULT_WINDOW_RATE = 50.0
+        private const val DEFAULT_FLOOR_RATE = 100.0
+        private const val ROOM_LABOUR = 200.0
+    }
 
     private data class RoomQuoteData(
         val room: Room,
@@ -21,6 +31,7 @@ class QuoteActivity : AppCompatActivity() {
     private lateinit var lblQuoteTitle: TextView
     private lateinit var lblQuoteAddress: TextView
     private lateinit var lblQuoteStatus: TextView
+    private lateinit var lblQuoteTotal: TextView
     private lateinit var layoutQuoteContent: LinearLayout
     private lateinit var houseId: String
 
@@ -31,6 +42,7 @@ class QuoteActivity : AppCompatActivity() {
         lblQuoteTitle = findViewById(R.id.lblQuoteTitle)
         lblQuoteAddress = findViewById(R.id.lblQuoteAddress)
         lblQuoteStatus = findViewById(R.id.lblQuoteStatus)
+        lblQuoteTotal = findViewById(R.id.lblQuoteTotal)
         layoutQuoteContent = findViewById(R.id.layoutQuoteContent)
 
         houseId = intent.getStringExtra(HOUSE_ID_EXTRA) ?: run {
@@ -45,6 +57,7 @@ class QuoteActivity : AppCompatActivity() {
         title = getString(R.string.quote_title_default)
         lblQuoteTitle.text = houseName
         lblQuoteStatus.text = getString(R.string.quote_loading)
+        lblQuoteTotal.text = getString(R.string.quote_total_format, 0.0)
 
         loadHouseAndRooms()
     }
@@ -90,13 +103,13 @@ class QuoteActivity : AppCompatActivity() {
                             loadedRooms.add(roomData)
                             pending[0] -= 1
                             if (pending[0] == 0) {
-                                renderRooms(loadedRooms.sortedBy { it.room.name ?: "" })
+                                loadProductsAndRender(loadedRooms.sortedBy { it.room.name ?: "" })
                             }
                         },
                         onFailed = {
                             pending[0] -= 1
                             if (pending[0] == 0) {
-                                renderRooms(loadedRooms.sortedBy { it.room.name ?: "" })
+                                loadProductsAndRender(loadedRooms.sortedBy { it.room.name ?: "" })
                             }
                         }
                     )
@@ -106,7 +119,39 @@ class QuoteActivity : AppCompatActivity() {
                 Log.e(FIREBASE_TAG, "Error loading rooms for quote", it)
                 layoutQuoteContent.removeAllViews()
                 lblQuoteStatus.text = getString(R.string.quote_no_rooms)
+                lblQuoteTotal.text = getString(R.string.quote_total_format, 0.0)
             }
+    }
+
+    private fun loadProductsAndRender(roomQuotes: List<RoomQuoteData>) {
+        lblQuoteStatus.text = getString(R.string.quote_loading)
+
+        Thread {
+            try {
+                val endpoint = "https://utasbot.dev/kit305_2026/product"
+                val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                }
+
+                val responseCode = connection.responseCode
+                if (responseCode !in 200..299) {
+                    connection.disconnect()
+                    runOnUiThread { renderRooms(roomQuotes, emptyMap(), true) }
+                    return@Thread
+                }
+
+                val responseText = connection.inputStream.bufferedReader().use { it.readText() }
+                connection.disconnect()
+
+                val productRates = parseProductRates(responseText)
+                runOnUiThread { renderRooms(roomQuotes, productRates, false) }
+            } catch (e: Exception) {
+                Log.e(FIREBASE_TAG, "Error loading quote product prices", e)
+                runOnUiThread { renderRooms(roomQuotes, emptyMap(), true) }
+            }
+        }.start()
     }
 
     private fun loadRoomMeasurements(
@@ -147,11 +192,18 @@ class QuoteActivity : AppCompatActivity() {
             }
     }
 
-    private fun renderRooms(roomQuotes: List<RoomQuoteData>) {
+    private fun renderRooms(
+        roomQuotes: List<RoomQuoteData>,
+        productRates: Map<String, Double>,
+        usingDefaults: Boolean
+    ) {
         layoutQuoteContent.removeAllViews()
-        lblQuoteStatus.text = ""
+        lblQuoteStatus.text = if (usingDefaults) getString(R.string.quote_using_defaults) else ""
+
+        var houseTotal = 0.0
 
         for (roomQuote in roomQuotes) {
+            var roomSubtotal = 0.0
             val roomTitle = makeText(
                 getString(
                     R.string.quote_room_heading,
@@ -165,63 +217,100 @@ class QuoteActivity : AppCompatActivity() {
             val hasItems = roomQuote.windows.isNotEmpty() || roomQuote.floorSpaces.isNotEmpty()
             if (!hasItems) {
                 layoutQuoteContent.addView(makeText(getString(R.string.quote_no_items), 14f, leftPaddingDp = 12))
-                continue
+            } else {
+                roomQuote.windows.forEach { window ->
+                    val productName = window.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_window) }
+                        ?: getString(R.string.quote_product_basic_window)
+                    val rate = resolveRate(window.selectedProductId, productRates, DEFAULT_WINDOW_RATE)
+                    val area = calculateArea(window.widthMm, window.heightMm)
+                    val itemCost = area * rate
+                    roomSubtotal += itemCost
+
+                    layoutQuoteContent.addView(
+                        makeText(
+                            getString(
+                                R.string.quote_window_line,
+                                window.name?.ifBlank { "Unnamed" } ?: "Unnamed",
+                                window.widthMm,
+                                window.heightMm
+                            ),
+                            14f,
+                            leftPaddingDp = 12,
+                            topMarginDp = 6
+                        )
+                    )
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_product_line, productName), 13f, leftPaddingDp = 24))
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_item_area_format, area), 13f, leftPaddingDp = 24))
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_item_rate_format, rate), 13f, leftPaddingDp = 24))
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_item_cost_format, itemCost), 13f, leftPaddingDp = 24))
+                    if (window.panelCount > 1) {
+                        layoutQuoteContent.addView(makeText(getString(R.string.quote_item_panels_format, window.panelCount), 13f, leftPaddingDp = 24))
+                    }
+                }
+
+                roomQuote.floorSpaces.forEach { floorSpace ->
+                    val productName = floorSpace.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_floor) }
+                        ?: getString(R.string.quote_product_basic_floor)
+                    val rate = resolveRate(floorSpace.selectedProductId, productRates, DEFAULT_FLOOR_RATE)
+                    val area = calculateArea(floorSpace.widthMm, floorSpace.depthMm)
+                    val itemCost = area * rate
+                    roomSubtotal += itemCost
+
+                    layoutQuoteContent.addView(
+                        makeText(
+                            getString(
+                                R.string.quote_floor_line,
+                                floorSpace.name?.ifBlank { "Unnamed" } ?: "Unnamed",
+                                floorSpace.widthMm,
+                                floorSpace.depthMm
+                            ),
+                            14f,
+                            leftPaddingDp = 12,
+                            topMarginDp = 6
+                        )
+                    )
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_product_line, productName), 13f, leftPaddingDp = 24))
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_item_area_format, area), 13f, leftPaddingDp = 24))
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_item_rate_format, rate), 13f, leftPaddingDp = 24))
+                    layoutQuoteContent.addView(makeText(getString(R.string.quote_item_cost_format, itemCost), 13f, leftPaddingDp = 24))
+                }
             }
 
-            roomQuote.windows.forEach { window ->
-                layoutQuoteContent.addView(
-                    makeText(
-                        getString(
-                            R.string.quote_window_line,
-                            window.name?.ifBlank { "Unnamed" } ?: "Unnamed",
-                            window.widthMm,
-                            window.heightMm
-                        ),
-                        14f,
-                        leftPaddingDp = 12,
-                        topMarginDp = 6
-                    )
-                )
-                layoutQuoteContent.addView(
-                    makeText(
-                        getString(
-                            R.string.quote_product_line,
-                            window.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_window) }
-                                ?: getString(R.string.quote_product_basic_window)
-                        ),
-                        13f,
-                        leftPaddingDp = 24
-                    )
-                )
-            }
-
-            roomQuote.floorSpaces.forEach { floorSpace ->
-                layoutQuoteContent.addView(
-                    makeText(
-                        getString(
-                            R.string.quote_floor_line,
-                            floorSpace.name?.ifBlank { "Unnamed" } ?: "Unnamed",
-                            floorSpace.widthMm,
-                            floorSpace.depthMm
-                        ),
-                        14f,
-                        leftPaddingDp = 12,
-                        topMarginDp = 6
-                    )
-                )
-                layoutQuoteContent.addView(
-                    makeText(
-                        getString(
-                            R.string.quote_product_line,
-                            floorSpace.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_floor) }
-                                ?: getString(R.string.quote_product_basic_floor)
-                        ),
-                        13f,
-                        leftPaddingDp = 24
-                    )
-                )
-            }
+            val roomTotal = roomSubtotal + ROOM_LABOUR
+            houseTotal += roomTotal
+            layoutQuoteContent.addView(makeText(getString(R.string.quote_room_subtotal_format, roomSubtotal), 14f, leftPaddingDp = 12, topMarginDp = 8))
+            layoutQuoteContent.addView(makeText(getString(R.string.quote_room_labour_format, ROOM_LABOUR), 14f, leftPaddingDp = 12))
+            layoutQuoteContent.addView(makeText(getString(R.string.quote_room_total_format, roomTotal), 15f, leftPaddingDp = 12))
         }
+
+        lblQuoteTotal.text = getString(R.string.quote_total_format, houseTotal)
+    }
+
+    private fun resolveRate(productId: String?, productRates: Map<String, Double>, defaultRate: Double): Double {
+        if (productId.isNullOrBlank()) return defaultRate
+        return productRates[productId] ?: defaultRate
+    }
+
+    private fun calculateArea(widthMm: Int, heightMm: Int): Double {
+        return (widthMm / 1000.0) * (heightMm / 1000.0)
+    }
+
+    private fun parseProductRates(responseText: String): Map<String, Double> {
+        val result = mutableMapOf<String, Double>()
+        val array: JSONArray = if (responseText.trim().startsWith("{")) {
+            val root = JSONObject(responseText)
+            root.optJSONArray("data") ?: JSONArray()
+        } else {
+            JSONArray(responseText)
+        }
+
+        for (i in 0 until array.length()) {
+            val obj = array.optJSONObject(i) ?: continue
+            val id = obj.optString("id")
+            if (id.isBlank()) continue
+            result[id] = obj.optDouble("price_per_sqm", 0.0)
+        }
+        return result
     }
 
     private fun makeText(
@@ -247,5 +336,6 @@ class QuoteActivity : AppCompatActivity() {
         return view
     }
 }
+
 
 
