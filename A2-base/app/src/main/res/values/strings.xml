@@ -44,4 +44,6 @@
     <string name="quote_item_rate_format">Rate: $%1$.2f / m²</string>
     <string name="quote_item_panels_format">Panels: %1$d</string>
     <string name="quote_using_defaults">Product prices could not be loaded from the API. Using default rates for this quote.</string>
+    <string name="quote_room_include_format">Include room: %1$s</string>
+    <string name="quote_room_excluded">Room excluded from total</string>
 </resources>

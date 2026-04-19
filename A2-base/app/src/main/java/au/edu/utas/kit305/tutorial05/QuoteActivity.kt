@@ -3,6 +3,7 @@ package au.edu.utas.kit305.tutorial05
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +35,10 @@ class QuoteActivity : AppCompatActivity() {
     private lateinit var lblQuoteTotal: TextView
     private lateinit var layoutQuoteContent: LinearLayout
     private lateinit var houseId: String
+    private var currentRoomQuotes: List<RoomQuoteData> = emptyList()
+    private var currentProductRates: Map<String, Double> = emptyMap()
+    private var currentUsingDefaults: Boolean = false
+    private val includedRooms = mutableMapOf<String, Boolean>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -138,7 +143,7 @@ class QuoteActivity : AppCompatActivity() {
                 val responseCode = connection.responseCode
                 if (responseCode !in 200..299) {
                     connection.disconnect()
-                    runOnUiThread { renderRooms(roomQuotes, emptyMap(), true) }
+                    runOnUiThread { showQuote(roomQuotes, emptyMap(), true) }
                     return@Thread
                 }
 
@@ -146,12 +151,29 @@ class QuoteActivity : AppCompatActivity() {
                 connection.disconnect()
 
                 val productRates = parseProductRates(responseText)
-                runOnUiThread { renderRooms(roomQuotes, productRates, false) }
+                runOnUiThread { showQuote(roomQuotes, productRates, false) }
             } catch (e: Exception) {
                 Log.e(FIREBASE_TAG, "Error loading quote product prices", e)
-                runOnUiThread { renderRooms(roomQuotes, emptyMap(), true) }
+                runOnUiThread { showQuote(roomQuotes, emptyMap(), true) }
             }
         }.start()
+    }
+
+    private fun showQuote(
+        roomQuotes: List<RoomQuoteData>,
+        productRates: Map<String, Double>,
+        usingDefaults: Boolean
+    ) {
+        currentRoomQuotes = roomQuotes
+        currentProductRates = productRates
+        currentUsingDefaults = usingDefaults
+        for (roomQuote in roomQuotes) {
+            val roomId = roomQuote.room.id ?: continue
+            if (!includedRooms.containsKey(roomId)) {
+                includedRooms[roomId] = true
+            }
+        }
+        renderRooms()
     }
 
     private fun loadRoomMeasurements(
@@ -192,27 +214,57 @@ class QuoteActivity : AppCompatActivity() {
             }
     }
 
-    private fun renderRooms(
-        roomQuotes: List<RoomQuoteData>,
-        productRates: Map<String, Double>,
-        usingDefaults: Boolean
-    ) {
+    private fun renderRooms() {
         layoutQuoteContent.removeAllViews()
-        lblQuoteStatus.text = if (usingDefaults) getString(R.string.quote_using_defaults) else ""
+        lblQuoteStatus.text = if (currentUsingDefaults) getString(R.string.quote_using_defaults) else ""
 
         var houseTotal = 0.0
 
-        for (roomQuote in roomQuotes) {
+        for (roomQuote in currentRoomQuotes) {
+            val roomId = roomQuote.room.id ?: continue
+            val roomName = roomQuote.room.name?.ifBlank { "Unnamed room" } ?: "Unnamed room"
+            val includeRoom = includedRooms[roomId] != false
+
+            val roomToggle = CheckBox(this).apply {
+                text = getString(R.string.quote_room_include_format, roomName)
+                isChecked = includeRoom
+                textSize = 16f
+                setOnCheckedChangeListener { _, checked ->
+                    includedRooms[roomId] = checked
+                    renderRooms()
+                }
+            }
+            roomToggle.layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = (12 * resources.displayMetrics.density).toInt()
+            }
+            layoutQuoteContent.addView(roomToggle)
+
             var roomSubtotal = 0.0
             val roomTitle = makeText(
                 getString(
                     R.string.quote_room_heading,
-                    roomQuote.room.name?.ifBlank { "Unnamed room" } ?: "Unnamed room"
+                    roomName
                 ),
                 18f,
-                topMarginDp = 12
+                leftPaddingDp = 12,
+                topMarginDp = 4
             )
             layoutQuoteContent.addView(roomTitle)
+
+            if (!includeRoom) {
+                layoutQuoteContent.addView(
+                    makeText(
+                        getString(R.string.quote_room_excluded),
+                        14f,
+                        leftPaddingDp = 12,
+                        topMarginDp = 4
+                    )
+                )
+                continue
+            }
 
             val hasItems = roomQuote.windows.isNotEmpty() || roomQuote.floorSpaces.isNotEmpty()
             if (!hasItems) {
@@ -221,7 +273,7 @@ class QuoteActivity : AppCompatActivity() {
                 roomQuote.windows.forEach { window ->
                     val productName = window.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_window) }
                         ?: getString(R.string.quote_product_basic_window)
-                    val rate = resolveRate(window.selectedProductId, productRates, DEFAULT_WINDOW_RATE)
+                    val rate = resolveRate(window.selectedProductId, currentProductRates, DEFAULT_WINDOW_RATE)
                     val area = calculateArea(window.widthMm, window.heightMm)
                     val itemCost = area * rate
                     roomSubtotal += itemCost
@@ -251,7 +303,7 @@ class QuoteActivity : AppCompatActivity() {
                 roomQuote.floorSpaces.forEach { floorSpace ->
                     val productName = floorSpace.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_floor) }
                         ?: getString(R.string.quote_product_basic_floor)
-                    val rate = resolveRate(floorSpace.selectedProductId, productRates, DEFAULT_FLOOR_RATE)
+                    val rate = resolveRate(floorSpace.selectedProductId, currentProductRates, DEFAULT_FLOOR_RATE)
                     val area = calculateArea(floorSpace.widthMm, floorSpace.depthMm)
                     val itemCost = area * rate
                     roomSubtotal += itemCost
@@ -336,6 +388,8 @@ class QuoteActivity : AppCompatActivity() {
         return view
     }
 }
+
+
 
 
 
