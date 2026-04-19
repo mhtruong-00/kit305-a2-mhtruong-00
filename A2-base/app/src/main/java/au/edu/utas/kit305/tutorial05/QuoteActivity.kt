@@ -252,6 +252,7 @@ class QuoteActivity : AppCompatActivity() {
             layoutQuoteContent.addView(roomToggle)
 
             var roomSubtotal = 0.0
+            var hasMeasuredIncludedItem = false
             val roomTitle = makeText(
                 getString(
                     R.string.quote_room_heading,
@@ -310,6 +311,9 @@ class QuoteActivity : AppCompatActivity() {
                     val rate = resolveRate(window.selectedProductId, currentProductRates, DEFAULT_WINDOW_RATE)
                     val area = calculateArea(window.widthMm, window.heightMm)
                     val itemCost = area * rate
+                    if (area > 0.0) {
+                        hasMeasuredIncludedItem = true
+                    }
                     roomSubtotal += itemCost
 
                     layoutQuoteContent.addView(
@@ -365,6 +369,9 @@ class QuoteActivity : AppCompatActivity() {
                     val rate = resolveRate(floorSpace.selectedProductId, currentProductRates, DEFAULT_FLOOR_RATE)
                     val area = calculateArea(floorSpace.widthMm, floorSpace.depthMm)
                     val itemCost = area * rate
+                    if (area > 0.0) {
+                        hasMeasuredIncludedItem = true
+                    }
                     roomSubtotal += itemCost
 
                     layoutQuoteContent.addView(
@@ -387,10 +394,11 @@ class QuoteActivity : AppCompatActivity() {
                 }
             }
 
-            val roomTotal = roomSubtotal + ROOM_LABOUR
+            val roomLabour = if (hasMeasuredIncludedItem) ROOM_LABOUR else 0.0
+            val roomTotal = roomSubtotal + roomLabour
             houseTotal += roomTotal
             layoutQuoteContent.addView(makeText(getString(R.string.quote_room_subtotal_format, roomSubtotal), 14f, leftPaddingDp = 12, topMarginDp = 8))
-            layoutQuoteContent.addView(makeText(getString(R.string.quote_room_labour_format, ROOM_LABOUR), 14f, leftPaddingDp = 12))
+            layoutQuoteContent.addView(makeText(getString(R.string.quote_room_labour_format, roomLabour), 14f, leftPaddingDp = 12))
             layoutQuoteContent.addView(makeText(getString(R.string.quote_room_total_format, roomTotal), 15f, leftPaddingDp = 12))
         }
 
@@ -472,6 +480,9 @@ class QuoteActivity : AppCompatActivity() {
         }
     }
 }
+
+
+
 
 
 
