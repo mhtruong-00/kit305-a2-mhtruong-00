@@ -9,7 +9,6 @@ import android.util.Log
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import au.edu.utas.kit305.tutorial05.databinding.ActivityMainBinding
@@ -207,26 +206,6 @@ class MainActivity : AppCompatActivity() {
         startActivity(i)
     }
 
-    private fun createRoomFromHouse(position: Int) {
-        if (position < 0 || position >= houses.size) return
-        val house = houses[position]
-        val houseId = house.id ?: return
-        val newRoom = Room(houseId = houseId, name = "New Room")
-
-        Firebase.firestore.collection("rooms")
-            .add(newRoom)
-            .addOnSuccessListener { doc ->
-                val i = Intent(this, RoomDetails::class.java)
-                i.putExtra("room_id", doc.id)
-                i.putExtra("room_name", newRoom.name ?: "")
-                startActivity(i)
-            }
-            .addOnFailureListener {
-                Log.e(FIREBASE_TAG, "Error creating room from house", it)
-                Toast.makeText(this, "Could not create room", Toast.LENGTH_SHORT).show()
-            }
-    }
-
     private fun showHouseTapOptions(position: Int) {
         if (position < 0 || position >= houses.size) return
 
@@ -278,7 +257,7 @@ class MainActivity : AppCompatActivity() {
             holder.ui.btnCreateRoomHouse.setOnClickListener {
                 val currentPosition = holder.bindingAdapterPosition
                 if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                createRoomFromHouse(currentPosition)
+                openRoomsFromHouse(currentPosition)
             }
 
             holder.ui.btnDeleteHouse.setOnClickListener {
