@@ -168,18 +168,21 @@ class QuoteActivity : AppCompatActivity() {
         currentRoomQuotes = roomQuotes
         currentProductRates = productRates
         currentUsingDefaults = usingDefaults
+
+        // Rebuild include maps per fresh quote load to avoid stale hidden states.
+        includedRooms.clear()
+        includedItems.clear()
+
         for (roomQuote in roomQuotes) {
             val roomId = roomQuote.room.id ?: continue
-            if (!includedRooms.containsKey(roomId)) {
-                includedRooms[roomId] = true
+            includedRooms[roomId] = true
+            roomQuote.windows.forEachIndexed { index, window ->
+                val key = buildItemKey("window", roomId, window.id, window.name ?: "", index)
+                includedItems[key] = true
             }
-            roomQuote.windows.forEach { window ->
-                val key = buildItemKey("window", window.id, window.name ?: "")
-                if (!includedItems.containsKey(key)) includedItems[key] = true
-            }
-            roomQuote.floorSpaces.forEach { floorSpace ->
-                val key = buildItemKey("floor", floorSpace.id, floorSpace.name ?: "")
-                if (!includedItems.containsKey(key)) includedItems[key] = true
+            roomQuote.floorSpaces.forEachIndexed { index, floorSpace ->
+                val key = buildItemKey("floor", roomId, floorSpace.id, floorSpace.name ?: "", index)
+                includedItems[key] = true
             }
         }
         renderRooms()
@@ -280,8 +283,8 @@ class QuoteActivity : AppCompatActivity() {
             if (!hasItems) {
                 layoutQuoteContent.addView(makeText(getString(R.string.quote_no_items), 14f, leftPaddingDp = 12))
             } else {
-                roomQuote.windows.forEach { window ->
-                    val itemKey = buildItemKey("window", window.id, window.name ?: "")
+                roomQuote.windows.forEachIndexed { index, window ->
+                    val itemKey = buildItemKey("window", roomId, window.id, window.name ?: "", index)
                     val includeItem = includedItems[itemKey] != false
                     layoutQuoteContent.addView(
                         makeItemToggle(
@@ -303,7 +306,7 @@ class QuoteActivity : AppCompatActivity() {
                                 topMarginDp = 4
                             )
                         )
-                        return@forEach
+                        return@forEachIndexed
                     }
 
                     val productName = window.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_window) }
@@ -338,8 +341,8 @@ class QuoteActivity : AppCompatActivity() {
                     }
                 }
 
-                roomQuote.floorSpaces.forEach { floorSpace ->
-                    val itemKey = buildItemKey("floor", floorSpace.id, floorSpace.name ?: "")
+                roomQuote.floorSpaces.forEachIndexed { index, floorSpace ->
+                    val itemKey = buildItemKey("floor", roomId, floorSpace.id, floorSpace.name ?: "", index)
                     val includeItem = includedItems[itemKey] != false
                     layoutQuoteContent.addView(
                         makeItemToggle(
@@ -361,7 +364,7 @@ class QuoteActivity : AppCompatActivity() {
                                 topMarginDp = 4
                             )
                         )
-                        return@forEach
+                        return@forEachIndexed
                     }
 
                     val productName = floorSpace.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_floor) }
@@ -405,8 +408,9 @@ class QuoteActivity : AppCompatActivity() {
         lblQuoteTotal.text = getString(R.string.quote_total_format, houseTotal)
     }
 
-    private fun buildItemKey(type: String, id: String?, fallbackName: String): String {
-        return "$type:${id ?: fallbackName}"
+    private fun buildItemKey(type: String, roomId: String, id: String?, fallbackName: String, index: Int): String {
+        val stablePart = id ?: fallbackName
+        return "$type:$roomId:$stablePart:$index"
     }
 
     private fun resolveRate(productId: String?, productRates: Map<String, Double>, defaultRate: Double): Double {
@@ -480,6 +484,8 @@ class QuoteActivity : AppCompatActivity() {
         }
     }
 }
+
+
 
 
 
