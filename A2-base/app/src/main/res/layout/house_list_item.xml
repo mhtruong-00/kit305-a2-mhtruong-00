@@ -9,14 +9,13 @@
     android:background="@drawable/item_rectangle_background"
     android:clipToPadding="false"
     android:elevation="1dp"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:padding="12dp"
     android:gravity="center_vertical">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:orientation="vertical"
         android:paddingEnd="8dp">
 
@@ -36,34 +35,54 @@
     </LinearLayout>
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btnEditHouse"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/edit_house_action" />
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnCreateRoomHouse"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/create_room_action" />
+            <Button
+                android:id="@+id/btnEditHouse"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/edit_house_action" />
 
-        <Button
-            android:id="@+id/btnViewQuoteHouse"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/view_quote" />
+            <Button
+                android:id="@+id/btnCreateRoomHouse"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/create_room_action" />
+        </LinearLayout>
 
-        <Button
-            android:id="@+id/btnDeleteHouse"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/delete"
-            android:textColor="#D32F2F" />
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnViewQuoteHouse"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/view_quote" />
+
+            <Button
+                android:id="@+id/btnDeleteHouse"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/delete"
+                android:textColor="#D32F2F" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>
