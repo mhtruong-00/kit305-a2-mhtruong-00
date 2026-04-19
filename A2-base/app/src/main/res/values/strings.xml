@@ -46,4 +46,8 @@
     <string name="quote_using_defaults">Product prices could not be loaded from the API. Using default rates for this quote.</string>
     <string name="quote_room_include_format">Include room: %1$s</string>
     <string name="quote_room_excluded">Room excluded from total</string>
+    <string name="quote_item_include_format">Include %1$s: %2$s</string>
+    <string name="quote_item_excluded">%1$s excluded from total</string>
+    <string name="quote_window_label">window</string>
+    <string name="quote_floor_label">floor space</string>
 </resources>

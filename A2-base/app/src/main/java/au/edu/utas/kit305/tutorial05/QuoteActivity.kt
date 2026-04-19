@@ -39,6 +39,7 @@ class QuoteActivity : AppCompatActivity() {
     private var currentProductRates: Map<String, Double> = emptyMap()
     private var currentUsingDefaults: Boolean = false
     private val includedRooms = mutableMapOf<String, Boolean>()
+    private val includedItems = mutableMapOf<String, Boolean>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -172,6 +173,14 @@ class QuoteActivity : AppCompatActivity() {
             if (!includedRooms.containsKey(roomId)) {
                 includedRooms[roomId] = true
             }
+            roomQuote.windows.forEach { window ->
+                val key = buildItemKey("window", window.id, window.name ?: "")
+                if (!includedItems.containsKey(key)) includedItems[key] = true
+            }
+            roomQuote.floorSpaces.forEach { floorSpace ->
+                val key = buildItemKey("floor", floorSpace.id, floorSpace.name ?: "")
+                if (!includedItems.containsKey(key)) includedItems[key] = true
+            }
         }
         renderRooms()
     }
@@ -271,6 +280,31 @@ class QuoteActivity : AppCompatActivity() {
                 layoutQuoteContent.addView(makeText(getString(R.string.quote_no_items), 14f, leftPaddingDp = 12))
             } else {
                 roomQuote.windows.forEach { window ->
+                    val itemKey = buildItemKey("window", window.id, window.name ?: "")
+                    val includeItem = includedItems[itemKey] != false
+                    layoutQuoteContent.addView(
+                        makeItemToggle(
+                            getString(R.string.quote_window_label),
+                            window.name?.ifBlank { "Unnamed" } ?: "Unnamed",
+                            includeItem
+                        ) { checked ->
+                            includedItems[itemKey] = checked
+                            renderRooms()
+                        }
+                    )
+
+                    if (!includeItem) {
+                        layoutQuoteContent.addView(
+                            makeText(
+                                getString(R.string.quote_item_excluded, getString(R.string.quote_window_label)),
+                                13f,
+                                leftPaddingDp = 24,
+                                topMarginDp = 4
+                            )
+                        )
+                        return@forEach
+                    }
+
                     val productName = window.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_window) }
                         ?: getString(R.string.quote_product_basic_window)
                     val rate = resolveRate(window.selectedProductId, currentProductRates, DEFAULT_WINDOW_RATE)
@@ -301,6 +335,31 @@ class QuoteActivity : AppCompatActivity() {
                 }
 
                 roomQuote.floorSpaces.forEach { floorSpace ->
+                    val itemKey = buildItemKey("floor", floorSpace.id, floorSpace.name ?: "")
+                    val includeItem = includedItems[itemKey] != false
+                    layoutQuoteContent.addView(
+                        makeItemToggle(
+                            getString(R.string.quote_floor_label),
+                            floorSpace.name?.ifBlank { "Unnamed" } ?: "Unnamed",
+                            includeItem
+                        ) { checked ->
+                            includedItems[itemKey] = checked
+                            renderRooms()
+                        }
+                    )
+
+                    if (!includeItem) {
+                        layoutQuoteContent.addView(
+                            makeText(
+                                getString(R.string.quote_item_excluded, getString(R.string.quote_floor_label)),
+                                13f,
+                                leftPaddingDp = 24,
+                                topMarginDp = 4
+                            )
+                        )
+                        return@forEach
+                    }
+
                     val productName = floorSpace.selectedProductName?.ifBlank { getString(R.string.quote_product_basic_floor) }
                         ?: getString(R.string.quote_product_basic_floor)
                     val rate = resolveRate(floorSpace.selectedProductId, currentProductRates, DEFAULT_FLOOR_RATE)
@@ -336,6 +395,10 @@ class QuoteActivity : AppCompatActivity() {
         }
 
         lblQuoteTotal.text = getString(R.string.quote_total_format, houseTotal)
+    }
+
+    private fun buildItemKey(type: String, id: String?, fallbackName: String): String {
+        return "$type:${id ?: fallbackName}"
     }
 
     private fun resolveRate(productId: String?, productRates: Map<String, Double>, defaultRate: Double): Double {
@@ -387,7 +450,29 @@ class QuoteActivity : AppCompatActivity() {
         view.layoutParams = params
         return view
     }
+
+    private fun makeItemToggle(
+        itemType: String,
+        itemName: String,
+        checked: Boolean,
+        onChanged: (Boolean) -> Unit
+    ): CheckBox {
+        return CheckBox(this).apply {
+            text = getString(R.string.quote_item_include_format, itemType, itemName)
+            isChecked = checked
+            textSize = 14f
+            setPadding((12 * resources.displayMetrics.density).toInt(), paddingTop, paddingRight, paddingBottom)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = (6 * resources.displayMetrics.density).toInt()
+            }
+            setOnCheckedChangeListener { _, isChecked -> onChanged(isChecked) }
+        }
+    }
 }
+
 
 
 
