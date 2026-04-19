@@ -185,6 +185,17 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    private fun openQuoteFromHouse(position: Int) {
+        if (position < 0 || position >= houses.size) return
+        val house = houses[position]
+        val houseId = house.id ?: return
+
+        val i = Intent(this, QuoteActivity::class.java)
+        i.putExtra(HOUSE_ID_EXTRA, houseId)
+        i.putExtra(HOUSE_NAME_EXTRA, house.customerName ?: getString(R.string.quote_title_default))
+        startActivity(i)
+    }
+
     private fun showHouseTapOptions(position: Int) {
         if (position < 0 || position >= houses.size) return
 
@@ -231,6 +242,12 @@ class MainActivity : AppCompatActivity() {
                 val currentPosition = holder.bindingAdapterPosition
                 if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
                 promptDeleteHouse(currentPosition)
+            }
+
+            holder.ui.btnViewQuoteHouse.setOnClickListener {
+                val currentPosition = holder.bindingAdapterPosition
+                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
+                openQuoteFromHouse(currentPosition)
             }
         }
     }
