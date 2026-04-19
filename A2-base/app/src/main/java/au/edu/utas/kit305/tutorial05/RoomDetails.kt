@@ -159,7 +159,7 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchWindowProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.WINDOW, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.WINDOW, pos) },
-            onRemovePhoto   = { pos -> removeMeasurementPhoto(PhotoTarget.WINDOW, pos) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.WINDOW, pos) }
         )
 
         lstFloorSpaces.layoutManager = LinearLayoutManager(this)
@@ -174,7 +174,7 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchFloorProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.FLOOR_SPACE, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.FLOOR_SPACE, pos) },
-            onRemovePhoto   = { pos -> removeMeasurementPhoto(PhotoTarget.FLOOR_SPACE, pos) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.FLOOR_SPACE, pos) }
         )
 
         loadWindows(roomId)
@@ -191,7 +191,7 @@ class RoomDetails : AppCompatActivity() {
             pickImageLauncher.launch("image/*")
         }
         btnRemoveRoomPhoto.setOnClickListener {
-            removeMeasurementPhoto(PhotoTarget.ROOM, -1)
+            promptRemovePhoto(PhotoTarget.ROOM, -1)
         }
 
         btnSaveRoom.setOnClickListener {
@@ -371,6 +371,20 @@ class RoomDetails : AppCompatActivity() {
                     .addOnFailureListener { Log.e(FIREBASE_TAG, "Error removing floor photo", it) }
             }
         }
+    }
+
+    private fun promptRemovePhoto(target: PhotoTarget, pos: Int) {
+        val message = when (target) {
+            PhotoTarget.ROOM -> "Remove room photo?"
+            PhotoTarget.WINDOW -> "Remove this window photo?"
+            PhotoTarget.FLOOR_SPACE -> "Remove this floor space photo?"
+        }
+
+        AlertDialog.Builder(this)
+            .setMessage(message)
+            .setPositiveButton("Remove") { _, _ -> removeMeasurementPhoto(target, pos) }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun encodeImageToBase64(uri: Uri): String? {
