@@ -482,7 +482,7 @@ class QuoteActivity : AppCompatActivity() {
 
         val summary = StringBuilder()
         summary.append(getString(R.string.quote_share_title_format, titleText)).append("\n")
-        summary.append("Address: ").append(addressText).append("\n")
+        summary.append(getString(R.string.quote_share_address_format, addressText)).append("\n")
 
         if (currentUsingDefaults) {
             summary.append(getString(R.string.quote_using_defaults)).append("\n")
