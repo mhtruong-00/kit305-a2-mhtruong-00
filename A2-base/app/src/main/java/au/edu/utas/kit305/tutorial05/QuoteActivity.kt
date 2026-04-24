@@ -9,6 +9,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.widget.doAfterTextChanged
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
@@ -68,6 +69,11 @@ class QuoteActivity : AppCompatActivity() {
         btnApplyDiscount.setOnClickListener { applyDiscountFromInput() }
         btnClearDiscount.setOnClickListener { clearDiscount() }
         btnShareQuote.setOnClickListener { shareQuoteText() }
+        edtDiscountPercent.doAfterTextChanged {
+            edtDiscountPercent.error = null
+            updateDiscountButtons()
+        }
+        updateDiscountButtons()
 
         houseId = intent.getStringExtra(HOUSE_ID_EXTRA) ?: run {
             finish()
@@ -458,7 +464,13 @@ class QuoteActivity : AppCompatActivity() {
         discountPercent = 0.0
         edtDiscountPercent.setText("")
         edtDiscountPercent.error = null
+        updateDiscountButtons()
         renderRooms()
+    }
+
+    private fun updateDiscountButtons() {
+        val hasTypedValue = !edtDiscountPercent.text.isNullOrBlank()
+        btnClearDiscount.isEnabled = discountPercent > 0.0 || hasTypedValue
     }
 
     private fun buildShareText(): String {
