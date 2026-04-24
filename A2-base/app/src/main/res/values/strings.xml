@@ -57,10 +57,12 @@
     <string name="quote_share_title_format">Quote for %1$s</string>
     <string name="apply_discount">Apply</string>
     <string name="clear_discount">Clear</string>
+    <string name="discount_input_hint">Discount % (0 to 100)</string>
     <string name="discount_none">No discount applied</string>
     <string name="discount_applied_format">Discount applied: %1$.1f%% (-$%2$.2f)</string>
-    <string name="discount_invalid">Enter a discount between 0 and 100</string>
+    <string name="discount_invalid">Enter a valid discount from 0 to 100</string>
     <string name="quote_subtotal_format">House subtotal: $%1$.2f</string>
     <string name="quote_discount_line_format">Discount (%1$.1f%%): -$%2$.2f</string>
     <string name="quote_total_after_discount_format">House total: $%1$.2f</string>
+    <string name="quote_share_address_format">Address: %1$s</string>
 </resources>
