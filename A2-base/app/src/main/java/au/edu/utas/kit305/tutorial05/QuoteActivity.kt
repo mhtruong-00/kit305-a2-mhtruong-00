@@ -1,8 +1,10 @@
 package au.edu.utas.kit305.tutorial05
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -33,6 +35,7 @@ class QuoteActivity : AppCompatActivity() {
     private lateinit var lblQuoteAddress: TextView
     private lateinit var lblQuoteStatus: TextView
     private lateinit var lblQuoteTotal: TextView
+    private lateinit var btnShareQuote: Button
     private lateinit var layoutQuoteContent: LinearLayout
     private lateinit var houseId: String
     private var currentRoomQuotes: List<RoomQuoteData> = emptyList()
@@ -49,7 +52,9 @@ class QuoteActivity : AppCompatActivity() {
         lblQuoteAddress = findViewById(R.id.lblQuoteAddress)
         lblQuoteStatus = findViewById(R.id.lblQuoteStatus)
         lblQuoteTotal = findViewById(R.id.lblQuoteTotal)
+        btnShareQuote = findViewById(R.id.btnShareQuote)
         layoutQuoteContent = findViewById(R.id.layoutQuoteContent)
+        btnShareQuote.setOnClickListener { shareQuoteText() }
 
         houseId = intent.getStringExtra(HOUSE_ID_EXTRA) ?: run {
             finish()
@@ -406,6 +411,18 @@ class QuoteActivity : AppCompatActivity() {
         }
 
         lblQuoteTotal.text = getString(R.string.quote_total_format, houseTotal)
+    }
+
+    private fun shareQuoteText() {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, buildShareText())
+        }
+        startActivity(Intent.createChooser(sendIntent, getString(R.string.share_quote_chooser)))
+    }
+
+    private fun buildShareText(): String {
+        return getString(R.string.quote_title_default)
     }
 
     private fun buildItemKey(type: String, roomId: String, id: String?, fallbackName: String, index: Int): String {
