@@ -480,7 +480,9 @@ class QuoteActivity : AppCompatActivity() {
         summary.append("\n")
         if (currentRoomQuotes.isEmpty()) {
             summary.append(getString(R.string.quote_no_rooms)).append("\n")
-            summary.append(getString(R.string.quote_total_format, 0.0))
+            summary.append(getString(R.string.quote_subtotal_format, 0.0)).append("\n")
+            summary.append(getString(R.string.quote_discount_line_format, discountPercent, 0.0)).append("\n")
+            summary.append(getString(R.string.quote_total_after_discount_format, 0.0))
             return summary.toString()
         }
 
@@ -553,11 +555,17 @@ class QuoteActivity : AppCompatActivity() {
 
         if (!hasIncludedRoom) {
             summary.append(getString(R.string.quote_no_rooms)).append("\n")
-            summary.append(getString(R.string.quote_total_format, 0.0))
+            summary.append(getString(R.string.quote_subtotal_format, 0.0)).append("\n")
+            summary.append(getString(R.string.quote_discount_line_format, discountPercent, 0.0)).append("\n")
+            summary.append(getString(R.string.quote_total_after_discount_format, 0.0))
             return summary.toString()
         }
 
-        summary.append(getString(R.string.quote_total_format, houseTotal))
+        val discountAmount = houseTotal * (discountPercent / 100.0)
+        val finalTotal = houseTotal - discountAmount
+        summary.append(getString(R.string.quote_subtotal_format, houseTotal)).append("\n")
+        summary.append(getString(R.string.quote_discount_line_format, discountPercent, discountAmount)).append("\n")
+        summary.append(getString(R.string.quote_total_after_discount_format, finalTotal))
 
         return summary.toString()
     }
