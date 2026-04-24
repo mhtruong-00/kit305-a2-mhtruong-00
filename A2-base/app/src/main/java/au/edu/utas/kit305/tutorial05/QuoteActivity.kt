@@ -457,6 +457,7 @@ class QuoteActivity : AppCompatActivity() {
 
         edtDiscountPercent.error = null
         discountPercent = parsed
+        updateDiscountButtons()
         renderRooms()
     }
 
