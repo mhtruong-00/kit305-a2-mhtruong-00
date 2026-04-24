@@ -424,7 +424,16 @@ class QuoteActivity : AppCompatActivity() {
             layoutQuoteContent.addView(makeText(getString(R.string.quote_room_total_format, roomTotal), 15f, leftPaddingDp = 12))
         }
 
-        lblQuoteTotal.text = getString(R.string.quote_total_format, houseTotal)
+        lastHouseSubtotal = houseTotal
+        val discountAmount = houseTotal * (discountPercent / 100.0)
+        val finalTotal = houseTotal - discountAmount
+
+        lblDiscountSummary.text = if (discountPercent > 0.0) {
+            getString(R.string.discount_applied_format, discountPercent, discountAmount)
+        } else {
+            getString(R.string.discount_none)
+        }
+        lblQuoteTotal.text = getString(R.string.quote_total_after_discount_format, finalTotal)
     }
 
     private fun shareQuoteText() {
