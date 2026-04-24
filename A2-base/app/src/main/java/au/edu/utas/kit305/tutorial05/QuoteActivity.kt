@@ -442,6 +442,81 @@ class QuoteActivity : AppCompatActivity() {
             return summary.toString()
         }
 
+        var houseTotal = 0.0
+        var hasIncludedRoom = false
+
+        for (roomQuote in currentRoomQuotes) {
+            val roomId = roomQuote.room.id ?: continue
+            if (includedRooms[roomId] == false) {
+                continue
+            }
+
+            hasIncludedRoom = true
+            val roomName = roomQuote.room.name?.ifBlank { "Unnamed room" } ?: "Unnamed room"
+            summary.append(getString(R.string.quote_room_heading, roomName)).append("\n")
+
+            var roomSubtotal = 0.0
+            var hasMeasuredIncludedItem = false
+
+            roomQuote.windows.forEachIndexed { index, window ->
+                val itemKey = buildItemKey("window", roomId, window.id, window.name ?: "", index)
+                if (includedItems[itemKey] == false) {
+                    return@forEachIndexed
+                }
+
+                val windowName = window.name?.ifBlank { "Unnamed" } ?: "Unnamed"
+                val rate = resolveRate(window.selectedProductId, currentProductRates, DEFAULT_WINDOW_RATE)
+                val area = calculateArea(window.widthMm, window.heightMm)
+                val itemCost = area * rate
+                if (area > 0.0) hasMeasuredIncludedItem = true
+                roomSubtotal += itemCost
+
+                summary.append("  ")
+                    .append(getString(R.string.quote_window_line, windowName, window.widthMm, window.heightMm))
+                    .append("\n")
+                summary.append("  ")
+                    .append(getString(R.string.quote_item_cost_format, itemCost))
+                    .append("\n")
+            }
+
+            roomQuote.floorSpaces.forEachIndexed { index, floorSpace ->
+                val itemKey = buildItemKey("floor", roomId, floorSpace.id, floorSpace.name ?: "", index)
+                if (includedItems[itemKey] == false) {
+                    return@forEachIndexed
+                }
+
+                val floorName = floorSpace.name?.ifBlank { "Unnamed" } ?: "Unnamed"
+                val rate = resolveRate(floorSpace.selectedProductId, currentProductRates, DEFAULT_FLOOR_RATE)
+                val area = calculateArea(floorSpace.widthMm, floorSpace.depthMm)
+                val itemCost = area * rate
+                if (area > 0.0) hasMeasuredIncludedItem = true
+                roomSubtotal += itemCost
+
+                summary.append("  ")
+                    .append(getString(R.string.quote_floor_line, floorName, floorSpace.widthMm, floorSpace.depthMm))
+                    .append("\n")
+                summary.append("  ")
+                    .append(getString(R.string.quote_item_cost_format, itemCost))
+                    .append("\n")
+            }
+
+            val roomLabour = if (hasMeasuredIncludedItem) ROOM_LABOUR else 0.0
+            val roomTotal = roomSubtotal + roomLabour
+            houseTotal += roomTotal
+
+            summary.append("  ").append(getString(R.string.quote_room_subtotal_format, roomSubtotal)).append("\n")
+            summary.append("  ").append(getString(R.string.quote_room_labour_format, roomLabour)).append("\n")
+            summary.append("  ").append(getString(R.string.quote_room_total_format, roomTotal)).append("\n\n")
+        }
+
+        if (!hasIncludedRoom) {
+            summary.append(getString(R.string.quote_no_rooms)).append("\n")
+            summary.append(getString(R.string.quote_total_format, 0.0))
+            return summary.toString()
+        }
+
+        summary.append(getString(R.string.quote_total_format, houseTotal))
+
         return summary.toString()
     }
 
