@@ -47,6 +47,44 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             tools:text="House total: $1234.56" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/edtDiscountPercent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="%"
+                android:inputType="numberDecimal"
+                android:maxLines="1" />
+
+            <Button
+                android:id="@+id/btnApplyDiscount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/apply_discount" />
+
+            <Button
+                android:id="@+id/btnClearDiscount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/clear_discount" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/lblDiscountSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            tools:text="No discount applied" />
+
         <Button
             android:id="@+id/btnShareQuote"
             android:layout_width="wrap_content"
