@@ -49,7 +49,6 @@ class QuoteActivity : AppCompatActivity() {
     private val includedRooms = mutableMapOf<String, Boolean>()
     private val includedItems = mutableMapOf<String, Boolean>()
     private var discountPercent: Double = 0.0
-    private var lastHouseSubtotal: Double = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -424,7 +423,6 @@ class QuoteActivity : AppCompatActivity() {
             layoutQuoteContent.addView(makeText(getString(R.string.quote_room_total_format, roomTotal), 15f, leftPaddingDp = 12))
         }
 
-        lastHouseSubtotal = houseTotal
         val discountAmount = houseTotal * (discountPercent / 100.0)
         val finalTotal = houseTotal - discountAmount
 
