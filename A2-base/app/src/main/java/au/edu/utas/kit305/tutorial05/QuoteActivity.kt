@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -35,6 +36,10 @@ class QuoteActivity : AppCompatActivity() {
     private lateinit var lblQuoteAddress: TextView
     private lateinit var lblQuoteStatus: TextView
     private lateinit var lblQuoteTotal: TextView
+    private lateinit var lblDiscountSummary: TextView
+    private lateinit var edtDiscountPercent: EditText
+    private lateinit var btnApplyDiscount: Button
+    private lateinit var btnClearDiscount: Button
     private lateinit var btnShareQuote: Button
     private lateinit var layoutQuoteContent: LinearLayout
     private lateinit var houseId: String
@@ -43,6 +48,8 @@ class QuoteActivity : AppCompatActivity() {
     private var currentUsingDefaults: Boolean = false
     private val includedRooms = mutableMapOf<String, Boolean>()
     private val includedItems = mutableMapOf<String, Boolean>()
+    private var discountPercent: Double = 0.0
+    private var lastHouseSubtotal: Double = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,8 +59,13 @@ class QuoteActivity : AppCompatActivity() {
         lblQuoteAddress = findViewById(R.id.lblQuoteAddress)
         lblQuoteStatus = findViewById(R.id.lblQuoteStatus)
         lblQuoteTotal = findViewById(R.id.lblQuoteTotal)
+        lblDiscountSummary = findViewById(R.id.lblDiscountSummary)
+        edtDiscountPercent = findViewById(R.id.edtDiscountPercent)
+        btnApplyDiscount = findViewById(R.id.btnApplyDiscount)
+        btnClearDiscount = findViewById(R.id.btnClearDiscount)
         btnShareQuote = findViewById(R.id.btnShareQuote)
         layoutQuoteContent = findViewById(R.id.layoutQuoteContent)
+        lblDiscountSummary.text = getString(R.string.discount_none)
         btnShareQuote.setOnClickListener { shareQuoteText() }
 
         houseId = intent.getStringExtra(HOUSE_ID_EXTRA) ?: run {
