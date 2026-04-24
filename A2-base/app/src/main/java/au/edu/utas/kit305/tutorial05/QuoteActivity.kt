@@ -18,6 +18,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 
 class QuoteActivity : AppCompatActivity() {
 
@@ -457,6 +458,11 @@ class QuoteActivity : AppCompatActivity() {
 
         edtDiscountPercent.error = null
         discountPercent = parsed
+        val normalized = String.format(Locale.US, "%.1f", discountPercent)
+        if (edtDiscountPercent.text?.toString() != normalized) {
+            edtDiscountPercent.setText(normalized)
+            edtDiscountPercent.setSelection(normalized.length)
+        }
         updateDiscountButtons()
         renderRooms()
     }
