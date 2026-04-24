@@ -66,6 +66,8 @@ class QuoteActivity : AppCompatActivity() {
         btnShareQuote = findViewById(R.id.btnShareQuote)
         layoutQuoteContent = findViewById(R.id.layoutQuoteContent)
         lblDiscountSummary.text = getString(R.string.discount_none)
+        btnApplyDiscount.setOnClickListener { applyDiscountFromInput() }
+        btnClearDiscount.setOnClickListener { clearDiscount() }
         btnShareQuote.setOnClickListener { shareQuoteText() }
 
         houseId = intent.getStringExtra(HOUSE_ID_EXTRA) ?: run {
@@ -431,6 +433,25 @@ class QuoteActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_TEXT, buildShareText())
         }
         startActivity(Intent.createChooser(sendIntent, getString(R.string.share_quote_chooser)))
+    }
+
+    private fun applyDiscountFromInput() {
+        val parsed = edtDiscountPercent.text?.toString()?.trim()?.toDoubleOrNull()
+        if (parsed == null || parsed < 0.0 || parsed > 100.0) {
+            edtDiscountPercent.error = getString(R.string.discount_invalid)
+            return
+        }
+
+        edtDiscountPercent.error = null
+        discountPercent = parsed
+        renderRooms()
+    }
+
+    private fun clearDiscount() {
+        discountPercent = 0.0
+        edtDiscountPercent.setText("")
+        edtDiscountPercent.error = null
+        renderRooms()
     }
 
     private fun buildShareText(): String {
