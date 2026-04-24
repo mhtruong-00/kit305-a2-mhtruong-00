@@ -470,7 +470,13 @@ class QuoteActivity : AppCompatActivity() {
     }
 
     private fun updateDiscountButtons() {
-        val hasTypedValue = !edtDiscountPercent.text.isNullOrBlank()
+        val typedText = edtDiscountPercent.text?.toString()?.trim().orEmpty()
+        val hasTypedValue = typedText.isNotEmpty()
+        val typedValue = typedText.toDoubleOrNull()
+        val hasValidValue = typedValue != null && typedValue in 0.0..100.0
+        val valueChanged = hasValidValue && kotlin.math.abs((typedValue ?: 0.0) - discountPercent) > 0.0001
+
+        btnApplyDiscount.isEnabled = hasValidValue && valueChanged
         btnClearDiscount.isEnabled = discountPercent > 0.0 || hasTypedValue
     }
 
