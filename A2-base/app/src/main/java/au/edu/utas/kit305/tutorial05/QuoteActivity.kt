@@ -422,7 +422,27 @@ class QuoteActivity : AppCompatActivity() {
     }
 
     private fun buildShareText(): String {
-        return getString(R.string.quote_title_default)
+        val titleText = lblQuoteTitle.text?.toString()?.ifBlank { getString(R.string.quote_title_default) }
+            ?: getString(R.string.quote_title_default)
+        val addressText = lblQuoteAddress.text?.toString()?.ifBlank { getString(R.string.quote_address_missing) }
+            ?: getString(R.string.quote_address_missing)
+
+        val summary = StringBuilder()
+        summary.append(getString(R.string.quote_share_title_format, titleText)).append("\n")
+        summary.append("Address: ").append(addressText).append("\n")
+
+        if (currentUsingDefaults) {
+            summary.append(getString(R.string.quote_using_defaults)).append("\n")
+        }
+
+        summary.append("\n")
+        if (currentRoomQuotes.isEmpty()) {
+            summary.append(getString(R.string.quote_no_rooms)).append("\n")
+            summary.append(getString(R.string.quote_total_format, 0.0))
+            return summary.toString()
+        }
+
+        return summary.toString()
     }
 
     private fun buildItemKey(type: String, roomId: String, id: String?, fallbackName: String, index: Int): String {
