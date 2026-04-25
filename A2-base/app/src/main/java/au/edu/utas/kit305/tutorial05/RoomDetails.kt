@@ -63,6 +63,8 @@ class RoomDetails : AppCompatActivity() {
 
     private val windowList     = mutableListOf<Window>()
     private val floorSpaceList = mutableListOf<FloorSpace>()
+    private var windowsExpanded = false
+    private var floorSpacesExpanded = false
 
     private var pendingWindowPos     = -1
     private var pendingFloorSpacePos = -1
@@ -148,7 +150,7 @@ class RoomDetails : AppCompatActivity() {
         loadRoom(roomId)
 
         lstWindows.layoutManager = LinearLayoutManager(this)
-        lstWindows.adapter = MeasurementAdapter(
+        val windowsAdapter = MeasurementAdapter(
             items           = windowList,
             nameFn          = { w -> w.name ?: "Unnamed" },
             dimsFn          = { w -> "${w.widthMm}mm × ${w.heightMm}mm" },
@@ -159,11 +161,13 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchWindowProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.WINDOW, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.WINDOW, pos) },
-            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.WINDOW, pos) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.WINDOW, pos) },
+            onToggleExpand  = { windowsExpanded = !windowsExpanded; windowsAdapter.setExpanded(windowsExpanded) }
         )
+        lstWindows.adapter = windowsAdapter
 
         lstFloorSpaces.layoutManager = LinearLayoutManager(this)
-        lstFloorSpaces.adapter = MeasurementAdapter(
+        val floorAdapter = MeasurementAdapter(
             items           = floorSpaceList,
             nameFn          = { f -> f.name ?: "Unnamed" },
             dimsFn          = { f -> "${f.widthMm}mm × ${f.depthMm}mm" },
@@ -174,8 +178,10 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchFloorProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.FLOOR_SPACE, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.FLOOR_SPACE, pos) },
-            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.FLOOR_SPACE, pos) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.FLOOR_SPACE, pos) },
+            onToggleExpand  = { floorSpacesExpanded = !floorSpacesExpanded; floorAdapter.setExpanded(floorSpacesExpanded) }
         )
+        lstFloorSpaces.adapter = floorAdapter
 
         loadWindows(roomId)
         loadFloorSpaces(roomId)
@@ -686,36 +692,70 @@ class RoomDetails : AppCompatActivity() {
         private val onSelectProduct: (Int) -> Unit,
         private val onPhoto:         (Int) -> Unit,
         private val onGallery:       (Int) -> Unit,
-        private val onRemovePhoto:   (Int) -> Unit
-    ) : RecyclerView.Adapter<MeasurementHolder>() {
+        private val onRemovePhoto:   (Int) -> Unit,
+        private var isExpanded:      Boolean = false,
+        private val onToggleExpand:  (() -> Unit)? = null
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MeasurementHolder {
-            val v = LayoutInflater.from(parent.context)
-                .inflate(R.layout.measurement_list_item, parent, false)
-            return MeasurementHolder(v)
+        private val ITEM_TYPE_MEASUREMENT = 0
+        private val ITEM_TYPE_MORE = 1
+        private val ITEMS_PER_PAGE = 2
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            return if (viewType == ITEM_TYPE_MEASUREMENT) {
+                val v = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.measurement_list_item, parent, false)
+                MeasurementHolder(v)
+            } else {
+                val button = android.widget.Button(parent.context)
+                button.text = "Show More"
+                button.setOnClickListener { onToggleExpand?.invoke() }
+                val params = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                button.layoutParams = params
+                MoreHolder(button)
+            }
         }
 
-        override fun getItemCount() = items.size
+        override fun getItemCount(): Int {
+            val visibleCount = if (isExpanded) items.size else minOf(ITEMS_PER_PAGE, items.size)
+            val hasMore = !isExpanded && items.size > ITEMS_PER_PAGE
+            return visibleCount + (if (hasMore) 1 else 0)
+        }
 
-        override fun onBindViewHolder(holder: MeasurementHolder, position: Int) {
-            val item = items[position]
-            holder.txtName.text = nameFn(item)
-            holder.txtDims.text = dimsFn(item)
-            val prod = productFn(item)
-            holder.txtProduct.text = if (!prod.isNullOrBlank()) "Product: $prod" else "No product selected"
-            bindPhoto(holder.imgPhoto, holder.btnRemovePhoto, photoFn(item))
+        override fun getItemViewType(position: Int): Int {
+            val visibleCount = if (isExpanded) items.size else minOf(ITEMS_PER_PAGE, items.size)
+            return if (position < visibleCount) ITEM_TYPE_MEASUREMENT else ITEM_TYPE_MORE
+        }
 
-            holder.root.setOnClickListener {
-                val p = holder.bindingAdapterPosition
-                if (p != RecyclerView.NO_POSITION) onEdit(p)
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (holder is MeasurementHolder && position < items.size) {
+                val item = items[position]
+                holder.txtName.text = nameFn(item)
+                holder.txtDims.text = dimsFn(item)
+                val prod = productFn(item)
+                holder.txtProduct.text = if (!prod.isNullOrBlank()) "Product: $prod" else "No product selected"
+                bindPhoto(holder.imgPhoto, holder.btnRemovePhoto, photoFn(item))
+
+                holder.root.setOnClickListener {
+                    val p = holder.bindingAdapterPosition
+                    if (p != RecyclerView.NO_POSITION) onEdit(p)
+                }
+
+                holder.btnEdit.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onEdit(p) }
+                holder.btnDelete.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onDelete(p) }
+                holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }
+                holder.btnPhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onPhoto(p) }
+                holder.btnGallery.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onGallery(p) }
+                holder.btnRemovePhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onRemovePhoto(p) }
             }
+        }
 
-            holder.btnEdit.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onEdit(p) }
-            holder.btnDelete.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onDelete(p) }
-            holder.btnProduct.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onSelectProduct(p) }
-            holder.btnPhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onPhoto(p) }
-            holder.btnGallery.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onGallery(p) }
-            holder.btnRemovePhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onRemovePhoto(p) }
+        fun setExpanded(expanded: Boolean) {
+            isExpanded = expanded
+            notifyDataSetChanged()
         }
 
         private fun bindPhoto(imageView: ImageView, removeButton: Button, photoBase64: String?) {
@@ -745,4 +785,6 @@ class RoomDetails : AppCompatActivity() {
             }
         }
     }
+
+    class MoreHolder(itemView: android.widget.Button) : RecyclerView.ViewHolder(itemView)
 }
