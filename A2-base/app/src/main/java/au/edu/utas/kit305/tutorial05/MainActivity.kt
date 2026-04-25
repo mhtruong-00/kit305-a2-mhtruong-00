@@ -36,7 +36,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(ui.root)
 
         ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
-        val houseAdapter = HouseAdapter(houseList = houses, onToggleExpand = { housesExpanded = !housesExpanded; houseAdapter.setExpanded(housesExpanded) })
+        val houseAdapter = HouseAdapter(houseList = houses)
+        houseAdapter.setToggleCallback { housesExpanded = !housesExpanded; houseAdapter.setExpanded(housesExpanded) }
         ui.myList.adapter = houseAdapter
 
         ui.myList.layoutManager = LinearLayoutManager(this)
@@ -232,10 +233,11 @@ class MainActivity : AppCompatActivity() {
     inner class HouseHolder(var ui: HouseListItemBinding) : RecyclerView.ViewHolder(ui.root)
 
     inner class HouseAdapter(
-        private val houseList: MutableList<House>,
-        private var isExpanded: Boolean = false,
-        private val onToggleExpand: (() -> Unit)? = null
+        private val houseList: MutableList<House>
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+        private var isExpanded: Boolean = false
+        private var onToggleExpand: (() -> Unit)? = null
 
         private val ITEM_TYPE_HOUSE = 0
         private val ITEM_TYPE_MORE = 1
@@ -310,6 +312,10 @@ class MainActivity : AppCompatActivity() {
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
             notifyDataSetChanged()
+        }
+
+        fun setToggleCallback(callback: (() -> Unit)?) {
+            onToggleExpand = callback
         }
     }
 
