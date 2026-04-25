@@ -2,9 +2,13 @@ package au.edu.utas.kit305.tutorial05
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -167,6 +171,25 @@ class HouseDetails : AppCompatActivity() {
             val room = rooms[position]
             holder.ui.txtName.text = room.name ?: "Unnamed room"
             holder.ui.txtYear.text = holder.ui.root.context.getString(R.string.label_room)
+
+            // Load and display room photo
+            if (!room.photoBase64.isNullOrBlank()) {
+                try {
+                    val bytes = Base64.decode(room.photoBase64, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    if (bitmap != null) {
+                        holder.ui.imgRoomPhoto.setImageBitmap(bitmap)
+                        holder.ui.imgRoomPhoto.visibility = View.VISIBLE
+                    } else {
+                        holder.ui.imgRoomPhoto.visibility = View.GONE
+                    }
+                } catch (e: Exception) {
+                    Log.e(FIREBASE_TAG, "Error decoding room photo", e)
+                    holder.ui.imgRoomPhoto.visibility = View.GONE
+                }
+            } else {
+                holder.ui.imgRoomPhoto.visibility = View.GONE
+            }
 
             holder.ui.root.setOnClickListener {
                 val p = holder.bindingAdapterPosition
