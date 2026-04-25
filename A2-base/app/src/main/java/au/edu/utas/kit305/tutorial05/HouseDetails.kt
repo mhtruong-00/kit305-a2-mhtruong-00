@@ -23,6 +23,7 @@ class HouseDetails : AppCompatActivity() {
     private lateinit var ui: ActivityHouseDetailsBinding
     private val roomList = mutableListOf<Room>()
     private var houseId: String? = null
+    private var roomsExpanded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,13 +46,15 @@ class HouseDetails : AppCompatActivity() {
         title = intent.getStringExtra(HOUSE_NAME_EXTRA) ?: getString(R.string.label_house_rooms)
 
         ui.lstRooms.layoutManager = LinearLayoutManager(this)
-        ui.lstRooms.adapter = RoomAdapter(
+        val roomAdapter = RoomAdapter(
             rooms = roomList,
             onClick = { position -> openRoomDetails(position) },
             onEdit = { position -> openRoomDetails(position) },
             onDelete = { position -> promptDeleteRoom(position) },
-            onLongPress = { position -> promptDeleteRoom(position) }
+            onLongPress = { position -> promptDeleteRoom(position) },
+            onToggleExpand = { roomsExpanded = !roomsExpanded; roomAdapter.setExpanded(roomsExpanded) }
         )
+        ui.lstRooms.adapter = roomAdapter
 
         ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
         ui.btnAddRoom.setOnClickListener { addRoom(houseId) }
@@ -157,57 +160,93 @@ class HouseDetails : AppCompatActivity() {
         private val onClick: (Int) -> Unit,
         private val onEdit: (Int) -> Unit,
         private val onDelete: (Int) -> Unit,
-        private val onLongPress: (Int) -> Unit
-    ) : RecyclerView.Adapter<RoomHolder>() {
+        private val onLongPress: (Int) -> Unit,
+        private var isExpanded: Boolean = false,
+        private val onToggleExpand: (() -> Unit)? = null
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RoomHolder {
-            val ui = MyListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-            return RoomHolder(ui)
+        private val ITEM_TYPE_ROOM = 0
+        private val ITEM_TYPE_MORE = 1
+        private val ITEMS_PER_PAGE = 2
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            return if (viewType == ITEM_TYPE_ROOM) {
+                val ui = MyListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                RoomHolder(ui)
+            } else {
+                val button = android.widget.Button(parent.context)
+                button.text = "Show More Rooms"
+                button.setOnClickListener { onToggleExpand?.invoke() }
+                val params = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                button.layoutParams = params
+                MoreHolder(button)
+            }
         }
 
-        override fun getItemCount() = rooms.size
+        override fun getItemCount(): Int {
+            val visibleCount = if (isExpanded) rooms.size else minOf(ITEMS_PER_PAGE, rooms.size)
+            val hasMore = !isExpanded && rooms.size > ITEMS_PER_PAGE
+            return visibleCount + (if (hasMore) 1 else 0)
+        }
 
-        override fun onBindViewHolder(holder: RoomHolder, position: Int) {
-            val room = rooms[position]
-            holder.ui.txtName.text = room.name ?: "Unnamed room"
-            holder.ui.txtYear.text = holder.ui.root.context.getString(R.string.label_room)
+        override fun getItemViewType(position: Int): Int {
+            val visibleCount = if (isExpanded) rooms.size else minOf(ITEMS_PER_PAGE, rooms.size)
+            return if (position < visibleCount) ITEM_TYPE_ROOM else ITEM_TYPE_MORE
+        }
 
-            // Load and display room photo
-            if (!room.photoBase64.isNullOrBlank()) {
-                try {
-                    val bytes = Base64.decode(room.photoBase64, Base64.DEFAULT)
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    if (bitmap != null) {
-                        holder.ui.imgRoomPhoto.setImageBitmap(bitmap)
-                        holder.ui.imgRoomPhoto.visibility = View.VISIBLE
-                    } else {
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (holder is RoomHolder && position < rooms.size) {
+                val room = rooms[position]
+                holder.ui.txtName.text = room.name ?: "Unnamed room"
+                holder.ui.txtYear.text = holder.ui.root.context.getString(R.string.label_room)
+
+                // Load and display room photo
+                if (!room.photoBase64.isNullOrBlank()) {
+                    try {
+                        val bytes = Base64.decode(room.photoBase64, Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        if (bitmap != null) {
+                            holder.ui.imgRoomPhoto.setImageBitmap(bitmap)
+                            holder.ui.imgRoomPhoto.visibility = View.VISIBLE
+                        } else {
+                            holder.ui.imgRoomPhoto.visibility = View.GONE
+                        }
+                    } catch (e: Exception) {
+                        Log.e(FIREBASE_TAG, "Error decoding room photo", e)
                         holder.ui.imgRoomPhoto.visibility = View.GONE
                     }
-                } catch (e: Exception) {
-                    Log.e(FIREBASE_TAG, "Error decoding room photo", e)
+                } else {
                     holder.ui.imgRoomPhoto.visibility = View.GONE
                 }
-            } else {
-                holder.ui.imgRoomPhoto.visibility = View.GONE
-            }
 
-            holder.ui.root.setOnClickListener {
-                val p = holder.bindingAdapterPosition
-                if (p != RecyclerView.NO_POSITION) onClick(p)
-            }
-            holder.ui.btnEditRoom.setOnClickListener {
-                val p = holder.bindingAdapterPosition
-                if (p != RecyclerView.NO_POSITION) onEdit(p)
-            }
-            holder.ui.btnDeleteRoom.setOnClickListener {
-                val p = holder.bindingAdapterPosition
-                if (p != RecyclerView.NO_POSITION) onDelete(p)
-            }
-            holder.ui.root.setOnLongClickListener {
-                val p = holder.bindingAdapterPosition
-                if (p != RecyclerView.NO_POSITION) onLongPress(p)
-                true
+                holder.ui.root.setOnClickListener {
+                    val p = holder.bindingAdapterPosition
+                    if (p != RecyclerView.NO_POSITION && p < rooms.size) onClick(p)
+                }
+                holder.ui.btnEditRoom.setOnClickListener {
+                    val p = holder.bindingAdapterPosition
+                    if (p != RecyclerView.NO_POSITION && p < rooms.size) onEdit(p)
+                }
+                holder.ui.btnDeleteRoom.setOnClickListener {
+                    val p = holder.bindingAdapterPosition
+                    if (p != RecyclerView.NO_POSITION && p < rooms.size) onDelete(p)
+                }
+                holder.ui.root.setOnLongClickListener {
+                    val p = holder.bindingAdapterPosition
+                    if (p != RecyclerView.NO_POSITION && p < rooms.size) onLongPress(p)
+                    true
+                }
             }
         }
+
+        fun setExpanded(expanded: Boolean) {
+            isExpanded = expanded
+            notifyDataSetChanged()
+        }
     }
+
+    class MoreHolder(itemView: android.widget.Button) : RecyclerView.ViewHolder(itemView)
 }
