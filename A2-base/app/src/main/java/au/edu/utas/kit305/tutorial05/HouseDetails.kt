@@ -51,9 +51,9 @@ class HouseDetails : AppCompatActivity() {
             onClick = { position -> openRoomDetails(position) },
             onEdit = { position -> openRoomDetails(position) },
             onDelete = { position -> promptDeleteRoom(position) },
-            onLongPress = { position -> promptDeleteRoom(position) },
-            onToggleExpand = { roomsExpanded = !roomsExpanded; roomAdapter.setExpanded(roomsExpanded) }
+            onLongPress = { position -> promptDeleteRoom(position) }
         )
+        roomAdapter.setToggleCallback { roomsExpanded = !roomsExpanded; roomAdapter.setExpanded(roomsExpanded) }
         ui.lstRooms.adapter = roomAdapter
 
         ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
@@ -160,10 +160,11 @@ class HouseDetails : AppCompatActivity() {
         private val onClick: (Int) -> Unit,
         private val onEdit: (Int) -> Unit,
         private val onDelete: (Int) -> Unit,
-        private val onLongPress: (Int) -> Unit,
-        private var isExpanded: Boolean = false,
-        private val onToggleExpand: (() -> Unit)? = null
+        private val onLongPress: (Int) -> Unit
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+        private var isExpanded: Boolean = false
+        private var onToggleExpand: (() -> Unit)? = null
 
         private val ITEM_TYPE_ROOM = 0
         private val ITEM_TYPE_MORE = 1
@@ -245,6 +246,10 @@ class HouseDetails : AppCompatActivity() {
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
             notifyDataSetChanged()
+        }
+
+        fun setToggleCallback(callback: (() -> Unit)?) {
+            onToggleExpand = callback
         }
     }
 
