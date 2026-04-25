@@ -34,15 +34,31 @@
             android:layout_marginTop="8dp"
             android:text="Save Room" />
 
-        <!-- Room Photo -->
-        <ImageView
-            android:id="@+id/imgRoom"
+        <!-- Room Photo Section -->
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="12dp"
-            android:contentDescription="Room photo"
-            android:scaleType="centerCrop"
-            android:visibility="gone" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Room Photo"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textStyle="bold" />
+
+        <!-- Room Photo Card -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/rounded_card_background"
+            android:padding="4dp">
+
+            <ImageView
+                android:id="@+id/imgRoom"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:contentDescription="Room photo"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
