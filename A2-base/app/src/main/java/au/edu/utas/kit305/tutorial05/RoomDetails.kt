@@ -161,9 +161,9 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchWindowProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.WINDOW, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.WINDOW, pos) },
-            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.WINDOW, pos) },
-            onToggleExpand  = { windowsExpanded = !windowsExpanded; windowsAdapter.setExpanded(windowsExpanded) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.WINDOW, pos) }
         )
+        windowsAdapter.setToggleCallback { windowsExpanded = !windowsExpanded; windowsAdapter.setExpanded(windowsExpanded) }
         lstWindows.adapter = windowsAdapter
 
         lstFloorSpaces.layoutManager = LinearLayoutManager(this)
@@ -178,9 +178,9 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchFloorProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.FLOOR_SPACE, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.FLOOR_SPACE, pos) },
-            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.FLOOR_SPACE, pos) },
-            onToggleExpand  = { floorSpacesExpanded = !floorSpacesExpanded; floorAdapter.setExpanded(floorSpacesExpanded) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.FLOOR_SPACE, pos) }
         )
+        floorAdapter.setToggleCallback { floorSpacesExpanded = !floorSpacesExpanded; floorAdapter.setExpanded(floorSpacesExpanded) }
         lstFloorSpaces.adapter = floorAdapter
 
         loadWindows(roomId)
@@ -692,10 +692,11 @@ class RoomDetails : AppCompatActivity() {
         private val onSelectProduct: (Int) -> Unit,
         private val onPhoto:         (Int) -> Unit,
         private val onGallery:       (Int) -> Unit,
-        private val onRemovePhoto:   (Int) -> Unit,
-        private var isExpanded:      Boolean = false,
-        private val onToggleExpand:  (() -> Unit)? = null
+        private val onRemovePhoto:   (Int) -> Unit
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+        private var isExpanded: Boolean = false
+        private var onToggleExpand: (() -> Unit)? = null
 
         private val ITEM_TYPE_MEASUREMENT = 0
         private val ITEM_TYPE_MORE = 1
@@ -756,6 +757,10 @@ class RoomDetails : AppCompatActivity() {
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
             notifyDataSetChanged()
+        }
+
+        fun setToggleCallback(callback: (() -> Unit)?) {
+            onToggleExpand = callback
         }
 
         private fun bindPhoto(imageView: ImageView, removeButton: Button, photoBase64: String?) {
