@@ -27,6 +27,7 @@ val houses = mutableListOf<House>()
 
 class MainActivity : AppCompatActivity() {
     private lateinit var ui: ActivityMainBinding
+    private var housesExpanded = false
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +36,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(ui.root)
 
         ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
-        ui.myList.adapter = HouseAdapter(houseList = houses)
+        val houseAdapter = HouseAdapter(houseList = houses, onToggleExpand = { housesExpanded = !housesExpanded; houseAdapter.setExpanded(housesExpanded) })
+        ui.myList.adapter = houseAdapter
 
         ui.myList.layoutManager = LinearLayoutManager(this)
         ui.btnAddHouse.setOnClickListener { addHouse() }
@@ -229,48 +231,87 @@ class MainActivity : AppCompatActivity() {
 
     inner class HouseHolder(var ui: HouseListItemBinding) : RecyclerView.ViewHolder(ui.root)
 
-    inner class HouseAdapter(private val houseList: MutableList<House>) : RecyclerView.Adapter<HouseHolder>() {
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HouseHolder {
-            val ui = HouseListItemBinding.inflate(layoutInflater, parent, false)
-            return HouseHolder(ui)
+    inner class HouseAdapter(
+        private val houseList: MutableList<House>,
+        private var isExpanded: Boolean = false,
+        private val onToggleExpand: (() -> Unit)? = null
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+        private val ITEM_TYPE_HOUSE = 0
+        private val ITEM_TYPE_MORE = 1
+        private val ITEMS_PER_PAGE = 2
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            return if (viewType == ITEM_TYPE_HOUSE) {
+                val ui = HouseListItemBinding.inflate(layoutInflater, parent, false)
+                HouseHolder(ui)
+            } else {
+                val button = android.widget.Button(parent.context)
+                button.text = "Show More Houses"
+                button.setOnClickListener { onToggleExpand?.invoke() }
+                val params = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                button.layoutParams = params
+                MoreHolder(button)
+            }
         }
 
-        override fun getItemCount(): Int = houseList.size
+        override fun getItemCount(): Int {
+            val visibleCount = if (isExpanded) houseList.size else minOf(ITEMS_PER_PAGE, houseList.size)
+            val hasMore = !isExpanded && houseList.size > ITEMS_PER_PAGE
+            return visibleCount + (if (hasMore) 1 else 0)
+        }
 
-        override fun onBindViewHolder(holder: HouseHolder, position: Int) {
-            val house = houseList[position]
-            holder.ui.txtName.text = house.customerName ?: "Unnamed customer"
-            holder.ui.txtAddress.text = house.address ?: "No address"
+        override fun getItemViewType(position: Int): Int {
+            val visibleCount = if (isExpanded) houseList.size else minOf(ITEMS_PER_PAGE, houseList.size)
+            return if (position < visibleCount) ITEM_TYPE_HOUSE else ITEM_TYPE_MORE
+        }
 
-            holder.ui.root.setOnClickListener {
-                val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                openRoomsFromHouse(currentPosition)
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (holder is HouseHolder && position < houseList.size) {
+                val house = houseList[position]
+                holder.ui.txtName.text = house.customerName ?: "Unnamed customer"
+                holder.ui.txtAddress.text = house.address ?: "No address"
+
+                holder.ui.root.setOnClickListener {
+                    val currentPosition = holder.bindingAdapterPosition
+                    if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= houseList.size) return@setOnClickListener
+                    openRoomsFromHouse(currentPosition)
+                }
+
+                holder.ui.btnEditHouse.setOnClickListener {
+                    val currentPosition = holder.bindingAdapterPosition
+                    if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= houseList.size) return@setOnClickListener
+                    showEditHouseDialog(currentPosition)
+                }
+
+                holder.ui.btnCreateRoomHouse.setOnClickListener {
+                    val currentPosition = holder.bindingAdapterPosition
+                    if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= houseList.size) return@setOnClickListener
+                    openRoomsFromHouse(currentPosition)
+                }
+
+                holder.ui.btnDeleteHouse.setOnClickListener {
+                    val currentPosition = holder.bindingAdapterPosition
+                    if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= houseList.size) return@setOnClickListener
+                    promptDeleteHouse(currentPosition)
+                }
+
+                holder.ui.btnViewQuoteHouse.setOnClickListener {
+                    val currentPosition = holder.bindingAdapterPosition
+                    if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= houseList.size) return@setOnClickListener
+                    openQuoteFromHouse(currentPosition)
+                }
             }
+        }
 
-            holder.ui.btnEditHouse.setOnClickListener {
-                val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                showEditHouseDialog(currentPosition)
-            }
-
-            holder.ui.btnCreateRoomHouse.setOnClickListener {
-                val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                openRoomsFromHouse(currentPosition)
-            }
-
-            holder.ui.btnDeleteHouse.setOnClickListener {
-                val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                promptDeleteHouse(currentPosition)
-            }
-
-            holder.ui.btnViewQuoteHouse.setOnClickListener {
-                val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                openQuoteFromHouse(currentPosition)
-            }
+        fun setExpanded(expanded: Boolean) {
+            isExpanded = expanded
+            notifyDataSetChanged()
         }
     }
+
+    inner class MoreHolder(itemView: android.widget.Button) : RecyclerView.ViewHolder(itemView)
 }
