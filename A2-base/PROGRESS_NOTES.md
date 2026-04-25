@@ -1,5 +1,5 @@
 # KIT305 Assignment 2/3/4 — Progress Notes
-**Last updated:** 2026-04-14 (session end)  
+**Last updated:** 2026-04-25 (Room photo display + Share feature complete)  
 **Project:** Android app (Kotlin + Firebase Firestore) — Window/Floor covering quote app
 
 ---
@@ -14,9 +14,9 @@
 | Collection    | Fields                                         |
 |---------------|------------------------------------------------|
 | `houses`      | customerName, address                          |
-| `rooms`       | houseId, name                                  |
-| `windows`     | roomId, name, widthMm, heightMm               |
-| `floorspaces` | roomId, name, widthMm, depthMm                |
+| `rooms`       | houseId, name, photoBase64, photoUrl          |
+| `windows`     | roomId, name, widthMm, heightMm, photoBase64  |
+| `floorspaces` | roomId, name, widthMm, depthMm, photoBase64   |
 
 ---
 
@@ -76,56 +76,78 @@
 
 ## ✅ COMPLETED (new)
 
-### Feature 6 — Camera / Gallery room photo (10 pts) ✅ DONE 2026-04-14
-- `Room.kt` already includes `photoUrl` for Firestore persistence
-- `RoomDetails.kt` now supports:
-  - Camera capture (`ActivityResultContracts.TakePicture`)
-  - Gallery selection (`ActivityResultContracts.GetContent`)
-  - Runtime camera permission request
-  - Firebase Storage upload for selected image
-  - Saving image download URL back to Firestore `rooms/{roomId}.photoUrl`
-  - Loading and displaying existing room photo URL on screen open (no Glide)
-- `AndroidManifest.xml` now includes a `FileProvider` entry
+### Feature 6 — Camera / Gallery photos (room + window + floor) (10 pts) ✅ DONE 2026-04-14
+- `RoomDetails.kt` now supports `PhotoTarget.ROOM`, `PhotoTarget.WINDOW`, and `PhotoTarget.FLOOR_SPACE`
+- Photo actions implemented for room and measurement items:
+  - `Take Photo` (`ActivityResultContracts.TakePicture`)
+  - `From Gallery` (`ActivityResultContracts.GetContent`)
+  - `Remove Photo` (clears stored value and updates UI)
+- Runtime camera permission flow is implemented
+- Persistence uses **Firestore base64** fields (no Firebase Storage required):
+  - room photo saved to `rooms/{roomId}.photoBase64` (with `photoUrl` kept empty)
+  - window photo saved to `windows/{windowId}.photoBase64`
+  - floor photo saved to `floorspaces/{floorId}.photoBase64`
+- Compression/downscale is applied before encoding to stay under Firestore document limits
+- UI polish completed:
+  - Room photo buttons are consistent (`Take Photo`, `From Gallery`, `Remove Photo`)
+  - Measurement item photo buttons are aligned in one consistent row
+- `AndroidManifest.xml` includes a `FileProvider` entry
 - New file: `res/xml/file_paths.xml` for camera temp file URI support
+
+### Feature 7 — Quote Display (10 pts) ✅ DONE 2026-04-19
+- `QuoteActivity.kt` added and opened from `HouseDetails.kt`
+- Quote screen loads house, rooms, windows, and floor spaces from Firestore
+- Product pricing is fetched from the assignment API endpoint: `https://utasbot.dev/kit305_2026/product`
+- Quote calculations now show:
+  - item area
+  - product rate per square metre
+  - item cost
+  - room subtotal
+  - room labour ($200)
+  - room total
+  - final house total
+- Fallback rates are used if API pricing cannot be loaded:
+  - windows = $50 / m²
+  - floor spaces = $100 / m²
+- HD-level filtering behavior is implemented on the quote page:
+  - include/exclude room checkbox
+  - include/exclude window checkbox
+  - include/exclude floor space checkbox
+  - totals update instantly when toggles change
+
+### UI Polish — Room Photo Display ✅ DONE 2026-04-25
+- Room photo display improved with rounded card styling
+- Added "Room Photo" section label above the image for clarity
+- New drawable: `rounded_card_background.xml` (light gray with rounded corners and border)
+- Image view height increased to 220dp for better visibility
+- Photo buttons (Take Photo, From Gallery, Remove Photo) positioned directly below the image
+- Image displays with `centerCrop` scale type for optimal framing
 
 ---
 
 ## ❌ TODO (Remaining Features)
 
-### Feature 7 — Quote Display (10 pts)
-**← START HERE NEXT SESSION**
-**What to build:**
-- A `QuoteActivity` that takes a `houseId`
-- Shows an itemized list: House → Rooms → Spaces with selected product, measurement, panel count, cost
-- Calculates and shows:
-  - Cost per space = product price × panels (or area for floor)
-  - Cost per room = sum of space costs
-  - Total cost for house = sum of room costs
-- HD+: checkboxes to filter out individual rooms; totals update instantly
-
----
-
-### Feature 8 — Sharing (5 pts)
-**What to build:**
-- In `QuoteActivity`, add a Share button
-- Builds a text (or CSV for HD+) summary of the quote
-- Launches `Intent.ACTION_SEND` with `type = "text/plain"`
-
----
+### Feature 8 — Sharing (5 pts) ✅ DONE
+- Share button functional in `QuoteActivity`
+- Quote text built with customer name, address, itemized breakdown
+- Discount amount included in shared text
+- Launches Android share sheet via `Intent.ACTION_SEND`
+- Users can send quote via email, messaging, etc.
 
 ### Feature 9 — Custom Feature (10 pts)
-**Ideas (pick one):**
-- Map view showing house address (Google Maps)
-- Augmented reality preview of a product on a wall/floor
-- PDF export of the quote
-- Dark/light theme toggle
-- Push notifications when a quote is ready
+**Status:** Not yet started
+**Options to consider:**
+- Map view showing house address (Google Maps) - requires API key
+- PDF export of the quote - would provide professional output
+- Dark/light theme toggle - UI enhancement
+- Search/filter on house list - improves navigation
+- House copy functionality - allow duplication with pre-filled rooms
 
 ---
 
 ### Bonus / Polish
 - Search/filter on house list (for HD+)
-- App icon (for HD+)
+- App icon (for HD+) — Currently in progress with monochrome launcher icon
 - Consistent Material Design theme across all screens
 - Replace `txtYear` label repurposing with proper layout fields
 
@@ -137,11 +159,14 @@
 | `MainActivity.kt` | House list, add/delete house, edit house details |
 | `HouseDetails.kt` | Room list for selected house, add/delete room |
 | `RoomDetails.kt` | Room edit, window list, floor space list, add/edit/delete |
+| `QuoteActivity.kt` | House quote screen, totals, include/exclude toggles |
 | `House.kt` | Data class |
 | `Room.kt` | Data class |
 | `Window.kt` | Data class (widthMm, heightMm) |
 | `FloorSpace.kt` | Data class (widthMm, depthMm) |
 | `res/layout/activity_room_details.xml` | Layout for RoomDetails |
+| `res/layout/activity_quote.xml` | Layout for QuoteActivity |
+| `res/layout/measurement_list_item.xml` | Measurement row (edit/delete/product + photo actions) |
 | `res/values/strings.xml` | String resources |
 
 ---
@@ -149,12 +174,11 @@
 ## How to Resume
 When you return, say **"continue from progress notes"** and I will:
 1. Read this file
-2. Start **Feature 7 — Quote Display**
+2. Start **Feature 8 — Sharing**
 3. Implement steps:
-   - Add `QuoteActivity` and house-level quote screen
-   - Compute room totals + house total
-   - Include selected product names and measurements in itemized output
-   - Add exclude toggles (HD+ behavior)
+   - Add a Share button to `QuoteActivity`
+   - Build quote summary text from the current included rooms/items
+   - Launch Android share sheet with plain text quote output
 4. Continue with simple incremental commits and push after each part
 
 **Current stack policy state: Firebase + assignment API only (no Retrofit/OkHttp/Gson/Glide).**
