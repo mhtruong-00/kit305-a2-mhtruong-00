@@ -33,15 +33,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.toObject
-import java.io.ByteArrayOutputStream
+import androidx.core.graphics.scale
 import java.io.File
-import java.net.URL
+import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
 
-const val ROOM_INDEX           = "Room_Index"
 const val HOUSE_ID_EXTRA       = "House_Id"
-const val WINDOW_ID_EXTRA      = "window_id"
-const val FLOOR_SPACE_ID_EXTRA = "floor_space_id"
 
 class RoomDetails : AppCompatActivity() {
 
@@ -56,23 +53,23 @@ class RoomDetails : AppCompatActivity() {
         FLOOR_SPACE
     }
 
-    private lateinit var txtRoomName:         android.widget.EditText
-    private lateinit var lblRoomTitle:        android.widget.TextView
-    private lateinit var btnSaveRoom:         android.widget.Button
+    private lateinit var txtRoomName:         EditText
+    private lateinit var lblRoomTitle:        TextView
+    private lateinit var btnSaveRoom:         Button
     private lateinit var lstWindows:          RecyclerView
     private lateinit var lstFloorSpaces:      RecyclerView
-    private lateinit var btnAddWindow:        android.widget.Button
-    private lateinit var btnAddFloorSpace:    android.widget.Button
-    private lateinit var btnToggleWindows:    android.widget.Button
-    private lateinit var btnToggleFloor:      android.widget.Button
+    private lateinit var btnAddWindow:        Button
+    private lateinit var btnAddFloorSpace:    Button
+    private lateinit var btnToggleWindows:    Button
+    private lateinit var btnToggleFloor:      Button
     private lateinit var txtSearchWindows:    EditText
     private lateinit var txtSearchFloor:      EditText
-    private lateinit var lblWindowCount:      android.widget.TextView
-    private lateinit var lblFloorSpaceCount:  android.widget.TextView
+    private lateinit var lblWindowCount:      TextView
+    private lateinit var lblFloorSpaceCount:  TextView
     private lateinit var imgRoom:             ImageView
-    private lateinit var btnTakePhoto:        android.widget.Button
-    private lateinit var btnPickGallery:      android.widget.Button
-    private lateinit var btnRemoveRoomPhoto:  android.widget.Button
+    private lateinit var btnTakePhoto:        Button
+    private lateinit var btnPickGallery:      Button
+    private lateinit var btnRemoveRoomPhoto:  Button
 
     private val windowList     = mutableListOf<Window>()
     private val floorSpaceList = mutableListOf<FloorSpace>()
@@ -97,21 +94,29 @@ class RoomDetails : AppCompatActivity() {
 
     private val windowProductLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK && !pendingWindowId.isNullOrBlank()) {
+            val selectedWindowId = pendingWindowId
+            if (result.resultCode == RESULT_OK && !selectedWindowId.isNullOrBlank()) {
                 val productId = result.data?.getStringExtra(RESULT_PRODUCT_ID) ?: ""
                 val productName = result.data?.getStringExtra(RESULT_PRODUCT_NAME) ?: ""
                 val panelCount = result.data?.getIntExtra(RESULT_PANEL_COUNT, 1) ?: 1
-                if (productId.isNotBlank()) saveWindowProductById(pendingWindowId!!, productId, productName, panelCount)
+                val variant = result.data?.getStringExtra(RESULT_PRODUCT_VARIANT)
+                if (productId.isNotBlank()) {
+                    saveWindowProductById(selectedWindowId, productId, productName, panelCount, variant)
+                }
             }
             pendingWindowId = null
         }
 
     private val floorProductLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK && !pendingFloorSpaceId.isNullOrBlank()) {
+            val selectedFloorId = pendingFloorSpaceId
+            if (result.resultCode == RESULT_OK && !selectedFloorId.isNullOrBlank()) {
                 val productId = result.data?.getStringExtra(RESULT_PRODUCT_ID) ?: ""
                 val productName = result.data?.getStringExtra(RESULT_PRODUCT_NAME) ?: ""
-                if (productId.isNotBlank()) saveFloorSpaceProductById(pendingFloorSpaceId!!, productId, productName)
+                val variant = result.data?.getStringExtra(RESULT_PRODUCT_VARIANT)
+                if (productId.isNotBlank()) {
+                    saveFloorSpaceProductById(selectedFloorId, productId, productName, variant)
+                }
             }
             pendingFloorSpaceId = null
         }
@@ -178,7 +183,7 @@ class RoomDetails : AppCompatActivity() {
             items           = filteredWindowList,
             nameFn          = { w -> w.name ?: getString(R.string.unnamed) },
             dimsFn          = { w -> getString(R.string.window_dims_format, w.widthMm, w.heightMm) },
-            productFn       = { w -> w.selectedProductName },
+            productFn       = { w -> formatProductDisplay(w.selectedProductName, w.selectedProductVariant) },
             photoFn         = { w -> w.photoBase64 },
             onEdit          = { pos -> openWindowEdit(pos) },
             onDelete        = { pos -> deleteWindow(pos) },
@@ -194,7 +199,7 @@ class RoomDetails : AppCompatActivity() {
             items           = filteredFloorSpaceList,
             nameFn          = { f -> f.name ?: getString(R.string.unnamed) },
             dimsFn          = { f -> getString(R.string.floor_dims_format, f.widthMm, f.depthMm) },
-            productFn       = { f -> f.selectedProductName },
+            productFn       = { f -> formatProductDisplay(f.selectedProductName, f.selectedProductVariant) },
             photoFn         = { f -> f.photoBase64 },
             onEdit          = { pos -> openFloorSpaceEdit(pos) },
             onDelete        = { pos -> deleteFloorSpace(pos) },
@@ -606,13 +611,23 @@ class RoomDetails : AppCompatActivity() {
         windowProductLauncher.launch(i)
     }
 
-    private fun saveWindowProductById(windowId: String, productId: String, productName: String, panelCount: Int) {
+    private fun saveWindowProductById(windowId: String, productId: String, productName: String, panelCount: Int, variant: String?) {
         val w = windowList.firstOrNull { it.id == windowId } ?: return
         val wId = w.id ?: return
         Firebase.firestore.collection("windows").document(wId)
-            .update(mapOf("selectedProductId" to productId, "selectedProductName" to productName, "panelCount" to panelCount))
+            .update(
+                mapOf(
+                    "selectedProductId" to productId,
+                    "selectedProductName" to productName,
+                    "selectedProductVariant" to variant.orEmpty(),
+                    "panelCount" to panelCount
+                )
+            )
             .addOnSuccessListener {
-                w.selectedProductId = productId; w.selectedProductName = productName; w.panelCount = panelCount
+                w.selectedProductId = productId
+                w.selectedProductName = productName
+                w.selectedProductVariant = variant
+                w.panelCount = panelCount
                 applyWindowFilter()
                 Log.d(FIREBASE_TAG, "Window product saved: $productName x$panelCount panels")
             }
@@ -700,17 +715,31 @@ class RoomDetails : AppCompatActivity() {
         floorProductLauncher.launch(i)
     }
 
-    private fun saveFloorSpaceProductById(floorId: String, productId: String, productName: String) {
+    private fun saveFloorSpaceProductById(floorId: String, productId: String, productName: String, variant: String?) {
         val f = floorSpaceList.firstOrNull { it.id == floorId } ?: return
         val fId = f.id ?: return
         Firebase.firestore.collection("floorspaces").document(fId)
-            .update(mapOf("selectedProductId" to productId, "selectedProductName" to productName))
+            .update(
+                mapOf(
+                    "selectedProductId" to productId,
+                    "selectedProductName" to productName,
+                    "selectedProductVariant" to variant.orEmpty()
+                )
+            )
             .addOnSuccessListener {
-                f.selectedProductId = productId; f.selectedProductName = productName
+                f.selectedProductId = productId
+                f.selectedProductName = productName
+                f.selectedProductVariant = variant
                 applyFloorFilter()
                 Log.d(FIREBASE_TAG, "FloorSpace product saved: $productName")
             }
             .addOnFailureListener { Log.e(FIREBASE_TAG, "Error saving floor space product", it) }
+    }
+
+    private fun formatProductDisplay(productName: String?, variant: String?): String? {
+        val name = productName?.takeIf { it.isNotBlank() } ?: return null
+        val selectedVariant = variant?.takeIf { it.isNotBlank() } ?: return name
+        return getString(R.string.product_with_variant_format, name, selectedVariant)
     }
 
     // ─── Shared dialog ────────────────────────────────────────────────────────
@@ -910,7 +939,7 @@ class RoomDetails : AppCompatActivity() {
 
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
-            notifyDataSetChanged()
+            notifyItemRangeChanged(0, itemCount)
         }
 
         private fun bindPhoto(imageView: ImageView, removeButton: Button, photoBase64: String?) {
