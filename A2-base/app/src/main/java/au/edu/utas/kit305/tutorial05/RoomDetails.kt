@@ -49,6 +49,38 @@ class RoomDetails : AppCompatActivity() {
         private const val MIN_DIMENSION_MM = 1
         private const val MAX_DIMENSION_MM = 20_000
         private const val MAX_IMAGE_DIMENSION = 1280
+        private const val MAX_LIST_PREVIEW_DIMENSION = 512
+
+        private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+            val height = options.outHeight
+            val width = options.outWidth
+            if (height <= 0 || width <= 0) return 1
+
+            var inSampleSize = 1
+            while ((height / inSampleSize) > reqHeight || (width / inSampleSize) > reqWidth) {
+                inSampleSize *= 2
+            }
+            return inSampleSize.coerceAtLeast(1)
+        }
+
+        fun decodeBase64BitmapSafe(base64: String, reqWidth: Int, reqHeight: Int): Bitmap? {
+            return try {
+                val bytes = Base64.decode(base64, Base64.DEFAULT)
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                val decodeOpts = BitmapFactory.Options().apply {
+                    inSampleSize = calculateInSampleSize(bounds, reqWidth, reqHeight)
+                    inPreferredConfig = Bitmap.Config.RGB_565
+                }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOpts)
+            } catch (oom: OutOfMemoryError) {
+                Log.e(FIREBASE_TAG, "Out of memory decoding base64 image", oom)
+                null
+            } catch (e: Exception) {
+                Log.e(FIREBASE_TAG, "Error decoding base64 image", e)
+                null
+            }
+        }
     }
 
     private enum class PhotoTarget {
@@ -455,11 +487,37 @@ class RoomDetails : AppCompatActivity() {
 
     private fun encodeImageToBase64(uri: Uri): String? {
         return try {
-            val bitmap = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
+            val bitmap = decodeBitmapFromUri(uri, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION) ?: return null
             val bytes = compressBitmap(bitmap)
             Base64.encodeToString(bytes, Base64.DEFAULT)
+        } catch (oom: OutOfMemoryError) {
+            Log.e(FIREBASE_TAG, "Out of memory encoding photo", oom)
+            null
         } catch (e: Exception) {
             Log.e(FIREBASE_TAG, "Error encoding photo", e)
+            null
+        }
+    }
+
+    private fun decodeBitmapFromUri(uri: Uri, reqWidth: Int, reqHeight: Int): Bitmap? {
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, bounds)
+            } ?: return null
+
+            val decodeOpts = BitmapFactory.Options().apply {
+                inSampleSize = calculateInSampleSize(bounds, reqWidth, reqHeight)
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
+            contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, decodeOpts)
+            }
+        } catch (oom: OutOfMemoryError) {
+            Log.e(FIREBASE_TAG, "Out of memory decoding uri image", oom)
+            null
+        } catch (e: Exception) {
+            Log.e(FIREBASE_TAG, "Error decoding uri image", e)
             null
         }
     }
@@ -491,17 +549,12 @@ class RoomDetails : AppCompatActivity() {
 
     private fun showRoomPhoto(photoBase64: String?, photoUrl: String?) {
         if (!photoBase64.isNullOrBlank()) {
-            try {
-                val bytes = Base64.decode(photoBase64, Base64.DEFAULT)
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                if (bitmap != null) {
-                    imgRoom.setImageBitmap(bitmap)
-                    imgRoom.visibility = View.VISIBLE
-                    btnRemoveRoomPhoto.visibility = View.VISIBLE
-                    return
-                }
-            } catch (e: Exception) {
-                Log.e(FIREBASE_TAG, "Error decoding base64 room photo", e)
+            val bitmap = decodeBase64BitmapSafe(photoBase64, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
+            if (bitmap != null) {
+                imgRoom.setImageBitmap(bitmap)
+                imgRoom.visibility = View.VISIBLE
+                btnRemoveRoomPhoto.visibility = View.VISIBLE
+                return
             }
         }
 
@@ -517,6 +570,7 @@ class RoomDetails : AppCompatActivity() {
             try {
                 val bitmap = URL(photoUrl).openStream().use { BitmapFactory.decodeStream(it) }
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     if (bitmap != null) {
                         imgRoom.setImageBitmap(bitmap)
                         btnRemoveRoomPhoto.visibility = View.VISIBLE
@@ -529,6 +583,7 @@ class RoomDetails : AppCompatActivity() {
             } catch (e: Exception) {
                 Log.e(FIREBASE_TAG, "Error loading room photo", e)
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
                     imgRoom.setImageDrawable(null)
                     imgRoom.visibility = View.GONE
                     btnRemoveRoomPhoto.visibility = View.GONE
@@ -959,8 +1014,11 @@ class RoomDetails : AppCompatActivity() {
             }
 
             try {
-                val bytes = Base64.decode(photoBase64, Base64.DEFAULT)
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                val bitmap = decodeBase64BitmapSafe(
+                    photoBase64,
+                    MAX_LIST_PREVIEW_DIMENSION,
+                    MAX_LIST_PREVIEW_DIMENSION
+                )
                 if (bitmap != null) {
                     imageView.setImageBitmap(bitmap)
                     imageView.visibility = View.VISIBLE

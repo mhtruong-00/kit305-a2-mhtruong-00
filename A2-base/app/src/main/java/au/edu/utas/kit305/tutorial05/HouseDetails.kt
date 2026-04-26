@@ -163,15 +163,13 @@ class HouseDetails : AppCompatActivity() {
 
     private fun applyRoomFilter() {
         val q = roomSearchQuery.lowercase()
-        val oldSize = filteredRooms.size
         filteredRooms.clear()
-        ui.lstRooms.adapter?.notifyItemRangeRemoved(0, oldSize)
         if (q.isBlank()) {
             filteredRooms.addAll(roomList)
         } else {
             filteredRooms.addAll(roomList.filter { it.name.orEmpty().lowercase().contains(q) })
         }
-        ui.lstRooms.adapter?.notifyItemRangeInserted(0, filteredRooms.size)
+        ui.lstRooms.adapter?.notifyDataSetChanged()
         ui.lblRoomCount.text = getString(R.string.room_count_format, filteredRooms.size)
     }
 

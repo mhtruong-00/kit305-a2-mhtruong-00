@@ -172,11 +172,9 @@ class ProductListActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     progressProducts.visibility = View.GONE
-                    val oldSize = products.size
                     products.clear()
-                    lstProducts.adapter?.notifyItemRangeRemoved(0, oldSize)
                     products.addAll(parsedProducts)
-                    lstProducts.adapter?.notifyItemRangeInserted(0, parsedProducts.size)
+                    lstProducts.adapter?.notifyDataSetChanged()
                     if (products.isEmpty()) {
                         lblProductError.text = getString(R.string.product_none_returned, productType)
                         lblProductError.visibility = View.VISIBLE

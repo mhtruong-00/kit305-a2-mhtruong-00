@@ -291,9 +291,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyHouseFilter() {
         val q = houseSearchQuery.lowercase()
-        val oldSize = filteredHouses.size
         filteredHouses.clear()
-        ui.myList.adapter?.notifyItemRangeRemoved(0, oldSize)
         if (q.isBlank()) {
             filteredHouses.addAll(houses)
         } else {
@@ -305,7 +303,7 @@ class MainActivity : AppCompatActivity() {
                 }
             )
         }
-        ui.myList.adapter?.notifyItemRangeInserted(0, filteredHouses.size)
+        ui.myList.adapter?.notifyDataSetChanged()
         ui.lblMovieCount.text = getString(R.string.house_count_format, filteredHouses.size)
     }
 
