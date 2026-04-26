@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         ui.myList.adapter = houseAdapter
 
         ui.myList.layoutManager = LinearLayoutManager(this)
-        ui.btnAddHouse.setOnClickListener { addHouse() }
+        ui.btnAddHouse.setOnClickListener { showAddHouseDialog() }
         ui.txtSearchHouses.doAfterTextChanged {
             houseSearchQuery = it?.toString()?.trim().orEmpty()
             applyHouseFilter()
@@ -80,8 +80,49 @@ class MainActivity : AppCompatActivity() {
         applyHouseFilter()
     }
 
-    private fun addHouse() {
-        val newHouse = House(customerName = "New Customer", address = "New Address")
+    private fun showAddHouseDialog() {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = (16 * resources.displayMetrics.density).toInt()
+            setPadding(p, p, p, 0)
+        }
+
+        val nameEdit = EditText(this).apply {
+            hint = getString(R.string.house_dialog_customer_name_hint)
+        }
+
+        val addressEdit = EditText(this).apply {
+            hint = getString(R.string.house_dialog_address_hint)
+        }
+
+        layout.addView(nameEdit)
+        layout.addView(addressEdit)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.house_dialog_add_title)
+            .setView(layout)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val newName = nameEdit.text.toString().trim()
+                val newAddress = addressEdit.text.toString().trim()
+
+                val valid = validateHouseInput(nameEdit, addressEdit, newName, newAddress)
+                if (!valid) return@setOnClickListener
+
+                addHouse(newName, newAddress)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun addHouse(customerName: String, address: String) {
+        val newHouse = House(customerName = customerName, address = address)
 
         Firebase.firestore.collection("houses")
             .add(newHouse)
@@ -114,29 +155,72 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nameEdit = EditText(this).apply {
-            hint = "Customer name"
+            hint = getString(R.string.house_dialog_customer_name_hint)
             setText(house.customerName ?: "")
         }
 
         val addressEdit = EditText(this).apply {
-            hint = "Address"
+            hint = getString(R.string.house_dialog_address_hint)
             setText(house.address ?: "")
         }
 
         layout.addView(nameEdit)
         layout.addView(addressEdit)
 
-        AlertDialog.Builder(this)
-            .setTitle("Edit House")
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.house_dialog_edit_title)
             .setView(layout)
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val newName = nameEdit.text.toString().trim()
                 val newAddress = addressEdit.text.toString().trim()
-                if (newName.isBlank() || newAddress.isBlank()) return@setPositiveButton
+
+                val valid = validateHouseInput(nameEdit, addressEdit, newName, newAddress)
+                if (!valid) return@setOnClickListener
+
                 updateHouse(house, newName, newAddress)
+                dialog.dismiss()
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        }
+
+        dialog.show()
+    }
+
+    private fun containsLetter(value: String): Boolean = value.any { it.isLetter() }
+
+    private fun validateHouseInput(
+        nameEdit: EditText,
+        addressEdit: EditText,
+        newName: String,
+        newAddress: String
+    ): Boolean {
+        var valid = true
+
+        if (newName.isBlank()) {
+            nameEdit.error = getString(R.string.error_customer_name_required)
+            valid = false
+        } else {
+            nameEdit.error = null
+        }
+
+        when {
+            newAddress.isBlank() -> {
+                addressEdit.error = getString(R.string.error_address_required)
+                valid = false
+            }
+            !containsLetter(newAddress) -> {
+                // Prevent numeric-only addresses like "12345".
+                addressEdit.error = getString(R.string.error_address_requires_letter)
+                valid = false
+            }
+            else -> addressEdit.error = null
+        }
+
+        return valid
     }
 
     private fun updateHouse(house: House, customerName: String, address: String) {
