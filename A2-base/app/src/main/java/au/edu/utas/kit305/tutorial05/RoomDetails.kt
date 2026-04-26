@@ -63,8 +63,6 @@ class RoomDetails : AppCompatActivity() {
 
     private val windowList     = mutableListOf<Window>()
     private val floorSpaceList = mutableListOf<FloorSpace>()
-    private var windowsExpanded = false
-    private var floorSpacesExpanded = false
 
     private var pendingWindowPos     = -1
     private var pendingFloorSpacePos = -1
@@ -161,9 +159,14 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchWindowProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.WINDOW, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.WINDOW, pos) },
-            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.WINDOW, pos) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.WINDOW, pos) },
+            showMoreLabel   = "Show More Windows",
+            showLessLabel   = "Show Less Windows"
         )
-        windowsAdapter.setToggleCallback { windowsExpanded = !windowsExpanded; windowsAdapter.setExpanded(windowsExpanded) }
+        windowsAdapter.setToggleCallback {
+            windowsExpanded = !windowsExpanded
+            windowsAdapter.setExpanded(windowsExpanded)
+        }
         lstWindows.adapter = windowsAdapter
 
         lstFloorSpaces.layoutManager = LinearLayoutManager(this)
@@ -178,9 +181,14 @@ class RoomDetails : AppCompatActivity() {
             onSelectProduct = { pos -> launchFloorProductPicker(pos) },
             onPhoto         = { pos -> startMeasurementCamera(PhotoTarget.FLOOR_SPACE, pos) },
             onGallery       = { pos -> startMeasurementGallery(PhotoTarget.FLOOR_SPACE, pos) },
-            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.FLOOR_SPACE, pos) }
+            onRemovePhoto   = { pos -> promptRemovePhoto(PhotoTarget.FLOOR_SPACE, pos) },
+            showMoreLabel   = "Show More Floor Spaces",
+            showLessLabel   = "Show Less Floor Spaces"
         )
-        floorAdapter.setToggleCallback { floorSpacesExpanded = !floorSpacesExpanded; floorAdapter.setExpanded(floorSpacesExpanded) }
+        floorAdapter.setToggleCallback {
+            floorSpacesExpanded = !floorSpacesExpanded
+            floorAdapter.setExpanded(floorSpacesExpanded)
+        }
         lstFloorSpaces.adapter = floorAdapter
 
         loadWindows(roomId)
@@ -692,43 +700,43 @@ class RoomDetails : AppCompatActivity() {
         private val onSelectProduct: (Int) -> Unit,
         private val onPhoto:         (Int) -> Unit,
         private val onGallery:       (Int) -> Unit,
-        private val onRemovePhoto:   (Int) -> Unit
+        private val onRemovePhoto:   (Int) -> Unit,
+        private val showMoreLabel: String = "Show More",
+        private val showLessLabel: String = "Show Less"
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        private var isExpanded: Boolean = false
+        private var isExpanded = false
         private var onToggleExpand: (() -> Unit)? = null
 
-        private val ITEM_TYPE_MEASUREMENT = 0
-        private val ITEM_TYPE_MORE = 1
-        private val ITEMS_PER_PAGE = 2
+        private val itemTypeMeasurement = 0
+        private val itemTypeToggle = 1
+        private val itemsPerPage = 2
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            return if (viewType == ITEM_TYPE_MEASUREMENT) {
+            return if (viewType == itemTypeMeasurement) {
                 val v = LayoutInflater.from(parent.context)
                     .inflate(R.layout.measurement_list_item, parent, false)
                 MeasurementHolder(v)
             } else {
                 val button = android.widget.Button(parent.context)
-                button.text = "Show More"
                 button.setOnClickListener { onToggleExpand?.invoke() }
-                val params = ViewGroup.LayoutParams(
+                button.layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
-                button.layoutParams = params
                 MoreHolder(button)
             }
         }
 
         override fun getItemCount(): Int {
-            val visibleCount = if (isExpanded) items.size else minOf(ITEMS_PER_PAGE, items.size)
-            val hasMore = !isExpanded && items.size > ITEMS_PER_PAGE
-            return visibleCount + (if (hasMore) 1 else 0)
+            val visibleCount = if (isExpanded) items.size else minOf(itemsPerPage, items.size)
+            val hasToggle = items.size > itemsPerPage
+            return visibleCount + (if (hasToggle) 1 else 0)
         }
 
         override fun getItemViewType(position: Int): Int {
-            val visibleCount = if (isExpanded) items.size else minOf(ITEMS_PER_PAGE, items.size)
-            return if (position < visibleCount) ITEM_TYPE_MEASUREMENT else ITEM_TYPE_MORE
+            val visibleCount = if (isExpanded) items.size else minOf(itemsPerPage, items.size)
+            return if (position < visibleCount) itemTypeMeasurement else itemTypeToggle
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -751,6 +759,9 @@ class RoomDetails : AppCompatActivity() {
                 holder.btnPhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onPhoto(p) }
                 holder.btnGallery.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onGallery(p) }
                 holder.btnRemovePhoto.setOnClickListener { val p = holder.bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onRemovePhoto(p) }
+            } else if (holder is MoreHolder) {
+                val button = holder.itemView as android.widget.Button
+                button.text = if (isExpanded) showLessLabel else showMoreLabel
             }
         }
 
