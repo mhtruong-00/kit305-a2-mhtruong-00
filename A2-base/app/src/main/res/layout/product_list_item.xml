@@ -12,7 +12,7 @@
         android:id="@+id/imgProduct"
         android:layout_width="72dp"
         android:layout_height="72dp"
-        android:contentDescription="Product image"
+        android:contentDescription="@string/product_image_content_desc"
         android:scaleType="centerCrop"
         android:background="#F0F0F0" />
 

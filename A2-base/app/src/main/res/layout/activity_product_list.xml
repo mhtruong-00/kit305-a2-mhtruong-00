@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp"
-        android:text="Select a Product"
+        android:text="@string/product_list_title_default"
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
         android:textStyle="bold"
         android:background="@color/purple_500"
@@ -25,7 +25,7 @@
         android:paddingEnd="16dp"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        android:text="Space dimensions:"
+        android:text="@string/product_space_dimensions_default"
         android:textAppearance="@style/TextAppearance.AppCompat.Small"
         android:textColor="@android:color/darker_gray"
         android:background="#F5F5F5" />
