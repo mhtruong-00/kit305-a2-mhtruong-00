@@ -63,6 +63,8 @@ class RoomDetails : AppCompatActivity() {
 
     private val windowList     = mutableListOf<Window>()
     private val floorSpaceList = mutableListOf<FloorSpace>()
+    private var windowsExpanded = false
+    private var floorSpacesExpanded = false
 
     private var pendingWindowPos     = -1
     private var pendingFloorSpacePos = -1

@@ -47,4 +47,14 @@
         android:text="TextView"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
+    <ImageView
+        android:id="@+id/imgRoomPhoto"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:layout_marginTop="8dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="Room photo"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
 </LinearLayout>
