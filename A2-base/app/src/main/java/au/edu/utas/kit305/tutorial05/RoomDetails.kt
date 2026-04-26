@@ -13,6 +13,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.text.InputFilter
+import android.text.InputType
+import android.text.method.DigitsKeyListener
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -41,6 +44,11 @@ const val WINDOW_ID_EXTRA      = "window_id"
 const val FLOOR_SPACE_ID_EXTRA = "floor_space_id"
 
 class RoomDetails : AppCompatActivity() {
+
+    companion object {
+        private const val MIN_DIMENSION_MM = 1
+        private const val MAX_DIMENSION_MM = 20_000
+    }
 
     private enum class PhotoTarget {
         ROOM,
@@ -113,7 +121,7 @@ class RoomDetails : AppCompatActivity() {
             if (granted) {
                 launchCameraCapture()
             } else {
-                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -168,8 +176,8 @@ class RoomDetails : AppCompatActivity() {
         lstWindows.layoutManager = LinearLayoutManager(this)
         windowsAdapter = MeasurementAdapter(
             items           = filteredWindowList,
-            nameFn          = { w -> w.name ?: "Unnamed" },
-            dimsFn          = { w -> "${w.widthMm}mm × ${w.heightMm}mm" },
+            nameFn          = { w -> w.name ?: getString(R.string.unnamed) },
+            dimsFn          = { w -> getString(R.string.window_dims_format, w.widthMm, w.heightMm) },
             productFn       = { w -> w.selectedProductName },
             photoFn         = { w -> w.photoBase64 },
             onEdit          = { pos -> openWindowEdit(pos) },
@@ -184,8 +192,8 @@ class RoomDetails : AppCompatActivity() {
         lstFloorSpaces.layoutManager = LinearLayoutManager(this)
         floorAdapter = MeasurementAdapter(
             items           = filteredFloorSpaceList,
-            nameFn          = { f -> f.name ?: "Unnamed" },
-            dimsFn          = { f -> "${f.widthMm}mm × ${f.depthMm}mm" },
+            nameFn          = { f -> f.name ?: getString(R.string.unnamed) },
+            dimsFn          = { f -> getString(R.string.floor_dims_format, f.widthMm, f.depthMm) },
             productFn       = { f -> f.selectedProductName },
             photoFn         = { f -> f.photoBase64 },
             onEdit          = { pos -> openFloorSpaceEdit(pos) },
@@ -240,11 +248,11 @@ class RoomDetails : AppCompatActivity() {
 
         btnSaveRoom.setOnClickListener {
             val name = txtRoomName.text.toString().trim()
-            if (name.isBlank()) { lblRoomTitle.text = "Room name cannot be empty"; return@setOnClickListener }
+            if (name.isBlank()) { lblRoomTitle.text = getString(R.string.room_name_required); return@setOnClickListener }
             Firebase.firestore.collection("rooms").document(roomId)
                 .update("name", name)
                 .addOnSuccessListener { Log.d(FIREBASE_TAG, "Room updated"); finish() }
-                .addOnFailureListener { Log.e(FIREBASE_TAG, "Error updating room", it); lblRoomTitle.text = "Could not save room" }
+                .addOnFailureListener { Log.e(FIREBASE_TAG, "Error updating room", it); lblRoomTitle.text = getString(R.string.room_save_failed) }
         }
     }
 
@@ -270,7 +278,7 @@ class RoomDetails : AppCompatActivity() {
 
     private fun launchCameraCapture() {
         val uri = createTempImageUri() ?: run {
-            Toast.makeText(this, "Could not prepare camera file", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.camera_prepare_failed), Toast.LENGTH_SHORT).show()
             return
         }
         pendingCameraUri = uri
@@ -318,26 +326,27 @@ class RoomDetails : AppCompatActivity() {
     private fun uploadRoomPhoto(uri: Uri) {
         val base64 = encodeImageToBase64(uri)
         if (base64 == null) {
-            Toast.makeText(this, "Photo processing failed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.photo_processing_failed), Toast.LENGTH_SHORT).show()
             return
         }
 
         Firebase.firestore.collection("rooms").document(roomId)
             .update(mapOf("photoBase64" to base64, "photoUrl" to ""))
             .addOnSuccessListener {
-                Toast.makeText(this, "Room photo saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.room_photo_saved), Toast.LENGTH_SHORT).show()
                 showRoomPhoto(base64, null)
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error saving photo in Firestore", it)
-                Toast.makeText(this, "Photo save failed: ${it.message ?: "unknown"}", Toast.LENGTH_LONG).show()
+                val reason = it.message ?: getString(R.string.unknown_error)
+                Toast.makeText(this, getString(R.string.photo_save_failed_with_reason, reason), Toast.LENGTH_LONG).show()
             }
     }
 
     private fun saveWindowPhoto(pos: Int, uri: Uri) {
         if (pos !in filteredWindowList.indices) return
         val base64 = encodeImageToBase64(uri) ?: run {
-            Toast.makeText(this, "Photo processing failed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.photo_processing_failed), Toast.LENGTH_SHORT).show()
             return
         }
         val window = filteredWindowList[pos]
@@ -348,18 +357,18 @@ class RoomDetails : AppCompatActivity() {
             .addOnSuccessListener {
                 window.photoBase64 = base64
                 applyWindowFilter()
-                Toast.makeText(this, "Window photo saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.window_photo_saved), Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error saving window photo", it)
-                Toast.makeText(this, "Window photo save failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.window_photo_save_failed), Toast.LENGTH_SHORT).show()
             }
     }
 
     private fun saveFloorSpacePhoto(pos: Int, uri: Uri) {
         if (pos !in filteredFloorSpaceList.indices) return
         val base64 = encodeImageToBase64(uri) ?: run {
-            Toast.makeText(this, "Photo processing failed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.photo_processing_failed), Toast.LENGTH_SHORT).show()
             return
         }
         val floorSpace = filteredFloorSpaceList[pos]
@@ -370,11 +379,11 @@ class RoomDetails : AppCompatActivity() {
             .addOnSuccessListener {
                 floorSpace.photoBase64 = base64
                 applyFloorFilter()
-                Toast.makeText(this, "Floor photo saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.floor_photo_saved), Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error saving floor photo", it)
-                Toast.makeText(this, "Floor photo save failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.floor_photo_save_failed), Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -419,15 +428,15 @@ class RoomDetails : AppCompatActivity() {
 
     private fun promptRemovePhoto(target: PhotoTarget, pos: Int) {
         val message = when (target) {
-            PhotoTarget.ROOM -> "Remove room photo?"
-            PhotoTarget.WINDOW -> "Remove this window photo?"
-            PhotoTarget.FLOOR_SPACE -> "Remove this floor space photo?"
+            PhotoTarget.ROOM -> getString(R.string.remove_room_photo_confirm)
+            PhotoTarget.WINDOW -> getString(R.string.remove_window_photo_confirm)
+            PhotoTarget.FLOOR_SPACE -> getString(R.string.remove_floor_photo_confirm)
         }
 
         AlertDialog.Builder(this)
             .setMessage(message)
-            .setPositiveButton("Remove") { _, _ -> removeMeasurementPhoto(target, pos) }
-            .setNegativeButton("Cancel", null)
+            .setPositiveButton(R.string.remove) { _, _ -> removeMeasurementPhoto(target, pos) }
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -522,21 +531,20 @@ class RoomDetails : AppCompatActivity() {
             .addOnSuccessListener { result ->
                 windowList.clear()
                 for (doc in result) { val w = doc.toObject<Window>(); w.id = doc.id; windowList.add(w) }
-                if (windowList.size <= 2) windowsExpanded = false
-                windowsAdapter.setExpanded(windowsExpanded)
-                lblWindowCount.text = "${windowList.size} Windows"
-                updateToggleButtons()
+                lblWindowCount.text = getString(R.string.window_count_format, windowList.size)
+                // Keep adapter/toggle state in sync with the currently filtered list.
+                applyWindowFilter()
             }
             .addOnFailureListener { Log.e(FIREBASE_TAG, "Error loading windows", it) }
     }
 
     private fun addWindow(roomId: String) {
         showMeasurementDialog(
-            "Add Window",
-            "New Window",
-            "Width (mm)",
+            getString(R.string.add_window_title),
+            getString(R.string.new_window_name),
+            getString(R.string.width_mm_label),
             0,
-            "Height (mm)",
+            getString(R.string.height_mm_label),
             0
         ) { name, d1, d2 ->
             val w = Window(roomId = roomId, name = name, widthMm = d1, heightMm = d2)
@@ -544,7 +552,7 @@ class RoomDetails : AppCompatActivity() {
                 .addOnSuccessListener {
                     w.id = it.id
                     windowList.add(0, w)
-                    lblWindowCount.text = "${windowList.size} Windows"
+                    lblWindowCount.text = getString(R.string.window_count_format, windowList.size)
                     lstWindows.scrollToPosition(0)
                     applyWindowFilter()
                 }
@@ -556,24 +564,31 @@ class RoomDetails : AppCompatActivity() {
         if (pos !in filteredWindowList.indices) return
         val w = filteredWindowList[pos]
         val wId = w.id ?: return
-        AlertDialog.Builder(this).setMessage("Delete this window?")
-            .setPositiveButton("Delete") { _, _ ->
+        AlertDialog.Builder(this).setMessage(R.string.delete_window_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
                 Firebase.firestore.collection("windows").document(wId).delete()
                     .addOnSuccessListener {
                         windowList.removeAll { it.id == wId }
                         if (windowList.size <= 2) windowsExpanded = false
                         windowsAdapter.setExpanded(windowsExpanded)
-                        lblWindowCount.text = "${windowList.size} Windows"
+                        lblWindowCount.text = getString(R.string.window_count_format, windowList.size)
                         applyWindowFilter()
                     }
                     .addOnFailureListener { Log.e(FIREBASE_TAG, "Error deleting window", it) }
-            }.setNegativeButton("Cancel", null).show()
+            }.setNegativeButton(R.string.cancel, null).show()
     }
 
     private fun openWindowEdit(pos: Int) {
         if (pos < 0 || pos >= filteredWindowList.size) return
         val w = filteredWindowList[pos]; val wId = w.id ?: return
-        showMeasurementDialog("Edit Window", w.name ?: "", "Width (mm)", w.widthMm, "Height (mm)", w.heightMm) { name, d1, d2 ->
+        showMeasurementDialog(
+            getString(R.string.edit_window_title),
+            w.name ?: "",
+            getString(R.string.width_mm_label),
+            w.widthMm,
+            getString(R.string.height_mm_label),
+            w.heightMm
+        ) { name, d1, d2 ->
             Firebase.firestore.collection("windows").document(wId).update(mapOf("name" to name, "widthMm" to d1, "heightMm" to d2))
                 .addOnSuccessListener { w.name = name; w.widthMm = d1; w.heightMm = d2; applyWindowFilter() }
                 .addOnFailureListener { Log.e(FIREBASE_TAG, "Error updating window", it) }
@@ -611,7 +626,7 @@ class RoomDetails : AppCompatActivity() {
             .addOnSuccessListener { result ->
                 floorSpaceList.clear()
                 for (doc in result) { val f = doc.toObject<FloorSpace>(); f.id = doc.id; floorSpaceList.add(f) }
-                lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces"
+                lblFloorSpaceCount.text = getString(R.string.floor_space_count_format, floorSpaceList.size)
                 applyFloorFilter()
             }
             .addOnFailureListener { Log.e(FIREBASE_TAG, "Error loading floor spaces", it) }
@@ -619,11 +634,11 @@ class RoomDetails : AppCompatActivity() {
 
     private fun addFloorSpace(roomId: String) {
         showMeasurementDialog(
-            "Add Floor Space",
-            "New Floor Space",
-            "Width (mm)",
+            getString(R.string.add_floor_space_title),
+            getString(R.string.new_floor_space_name),
+            getString(R.string.width_mm_label),
             0,
-            "Depth (mm)",
+            getString(R.string.depth_mm_label),
             0
         ) { name, d1, d2 ->
             val f = FloorSpace(roomId = roomId, name = name, widthMm = d1, depthMm = d2)
@@ -631,7 +646,7 @@ class RoomDetails : AppCompatActivity() {
                 .addOnSuccessListener {
                     f.id = it.id
                     floorSpaceList.add(0, f)
-                    lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces"
+                    lblFloorSpaceCount.text = getString(R.string.floor_space_count_format, floorSpaceList.size)
                     lstFloorSpaces.scrollToPosition(0)
                     applyFloorFilter()
                 }
@@ -643,24 +658,31 @@ class RoomDetails : AppCompatActivity() {
         if (pos !in filteredFloorSpaceList.indices) return
         val f = filteredFloorSpaceList[pos]
         val fId = f.id ?: return
-        AlertDialog.Builder(this).setMessage("Delete this floor space?")
-            .setPositiveButton("Delete") { _, _ ->
+        AlertDialog.Builder(this).setMessage(R.string.delete_floor_space_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
                 Firebase.firestore.collection("floorspaces").document(fId).delete()
                     .addOnSuccessListener {
                         floorSpaceList.removeAll { it.id == fId }
                         if (floorSpaceList.size <= 2) floorSpacesExpanded = false
                         floorAdapter.setExpanded(floorSpacesExpanded)
-                        lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces"
+                        lblFloorSpaceCount.text = getString(R.string.floor_space_count_format, floorSpaceList.size)
                         applyFloorFilter()
                     }
                     .addOnFailureListener { Log.e(FIREBASE_TAG, "Error deleting floor space", it) }
-            }.setNegativeButton("Cancel", null).show()
+            }.setNegativeButton(R.string.cancel, null).show()
     }
 
     private fun openFloorSpaceEdit(pos: Int) {
         if (pos < 0 || pos >= filteredFloorSpaceList.size) return
         val f = filteredFloorSpaceList[pos]; val fId = f.id ?: return
-        showMeasurementDialog("Edit Floor Space", f.name ?: "", "Width (mm)", f.widthMm, "Depth (mm)", f.depthMm) { name, d1, d2 ->
+        showMeasurementDialog(
+            getString(R.string.edit_floor_space_title),
+            f.name ?: "",
+            getString(R.string.width_mm_label),
+            f.widthMm,
+            getString(R.string.depth_mm_label),
+            f.depthMm
+        ) { name, d1, d2 ->
             Firebase.firestore.collection("floorspaces").document(fId).update(mapOf("name" to name, "widthMm" to d1, "depthMm" to d2))
                 .addOnSuccessListener { f.name = name; f.widthMm = d1; f.depthMm = d2; applyFloorFilter() }
                 .addOnFailureListener { Log.e(FIREBASE_TAG, "Error updating floor space", it) }
@@ -706,30 +728,75 @@ class RoomDetails : AppCompatActivity() {
         }
         fun et(hint: String, value: String, numeric: Boolean) = EditText(this).apply {
             this.hint = hint; setText(value)
-            if (numeric) inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            if (numeric) {
+                inputType = InputType.TYPE_CLASS_NUMBER
+                // Block letters/symbols at input time.
+                keyListener = DigitsKeyListener.getInstance("0123456789")
+                filters = arrayOf(InputFilter.LengthFilter(5))
+            }
         }
-        val etName = et("Name", name, false)
+        val etName = et(getString(R.string.measurement_name_hint), name, false)
         val etD1   = et(dim1Label, if (dim1Value > 0) dim1Value.toString() else "", true)
         val etD2   = et(dim2Label, if (dim2Value > 0) dim2Value.toString() else "", true)
         layout.addView(etName); layout.addView(etD1); layout.addView(etD2)
 
-        AlertDialog.Builder(this).setTitle(title).setView(layout)
-            .setPositiveButton("Save") { _, _ ->
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(layout)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val dim1 = validateDimensionInput(etD1, dim1Label)
+                val dim2 = validateDimensionInput(etD2, dim2Label)
+                if (dim1 == null || dim2 == null) return@setOnClickListener
+
                 onSave(
-                    etName.text.toString().trim().ifBlank { "Unnamed" },
-                    etD1.text.toString().toIntOrNull() ?: 0,
-                    etD2.text.toString().toIntOrNull() ?: 0
+                    etName.text.toString().trim().ifBlank { getString(R.string.unnamed) },
+                    dim1,
+                    dim2
                 )
+                dialog.dismiss()
             }
-            .setNegativeButton("Cancel", null).show()
+        }
+
+        dialog.show()
+    }
+
+    private fun validateDimensionInput(input: EditText, label: String): Int? {
+        val raw = input.text?.toString()?.trim().orEmpty()
+        val parsed = raw.toIntOrNull()
+
+        return when {
+            raw.isBlank() -> {
+                input.error = getString(R.string.error_dimension_required, label)
+                null
+            }
+            parsed == null -> {
+                input.error = getString(R.string.error_dimension_whole_number, label)
+                null
+            }
+            parsed < MIN_DIMENSION_MM || parsed > MAX_DIMENSION_MM -> {
+                input.error = getString(R.string.error_dimension_range, label, MIN_DIMENSION_MM, MAX_DIMENSION_MM)
+                null
+            }
+            else -> {
+                input.error = null
+                parsed
+            }
+        }
     }
 
     private fun updateToggleButtons() {
-        btnToggleWindows.visibility = if (filteredWindowList.size > 2) View.VISIBLE else View.GONE
-        btnToggleWindows.text = if (windowsExpanded) "Show Less Windows" else "Show More Windows"
+        // Keep toggle available based on total list size (not search result size)
+        // so users can always expand/collapse the main list clearly.
+        btnToggleWindows.visibility = if (windowList.size > 2) View.VISIBLE else View.GONE
+        btnToggleWindows.text = if (windowsExpanded) getString(R.string.quote_show_less_windows) else getString(R.string.quote_show_more_windows)
 
-        btnToggleFloor.visibility = if (filteredFloorSpaceList.size > 2) View.VISIBLE else View.GONE
-        btnToggleFloor.text = if (floorSpacesExpanded) "Show Less Floor Spaces" else "Show More Floor Spaces"
+        btnToggleFloor.visibility = if (floorSpaceList.size > 2) View.VISIBLE else View.GONE
+        btnToggleFloor.text = if (floorSpacesExpanded) getString(R.string.quote_show_less_floors) else getString(R.string.quote_show_more_floors)
     }
 
     private fun applyWindowFilter() {
@@ -749,6 +816,7 @@ class RoomDetails : AppCompatActivity() {
 
         if (filteredWindowList.size <= 2) windowsExpanded = false
         windowsAdapter.setExpanded(windowsExpanded)
+        lstWindows.post { lstWindows.requestLayout() }
         updateToggleButtons()
     }
 
@@ -769,6 +837,7 @@ class RoomDetails : AppCompatActivity() {
 
         if (filteredFloorSpaceList.size <= 2) floorSpacesExpanded = false
         floorAdapter.setExpanded(floorSpacesExpanded)
+        lstFloorSpaces.post { lstFloorSpaces.requestLayout() }
         updateToggleButtons()
     }
 
@@ -819,7 +888,11 @@ class RoomDetails : AppCompatActivity() {
             holder.txtName.text = nameFn(item)
             holder.txtDims.text = dimsFn(item)
             val prod = productFn(item)
-            holder.txtProduct.text = if (!prod.isNullOrBlank()) "Product: $prod" else "No product selected"
+            holder.txtProduct.text = if (!prod.isNullOrBlank()) {
+                holder.root.context.getString(R.string.product_selected_format, prod)
+            } else {
+                holder.root.context.getString(R.string.no_product_selected)
+            }
             bindPhoto(holder.imgPhoto, holder.btnRemovePhoto, photoFn(item))
 
             holder.root.setOnClickListener {
