@@ -71,6 +71,10 @@ class HouseDetails : AppCompatActivity() {
     private fun openRoomDetails(position: Int) {
         if (position < 0 || position >= roomList.size) return
         val room = roomList[position]
+        openRoomDetails(room)
+    }
+
+    private fun openRoomDetails(room: Room) {
         val i = Intent(this, RoomDetails::class.java)
         i.putExtra("room_id", room.id)
         i.putExtra("room_name", room.name ?: "")
@@ -189,8 +193,8 @@ class HouseDetails : AppCompatActivity() {
 
         override fun getItemCount(): Int {
             val visibleCount = if (isExpanded) rooms.size else minOf(ITEMS_PER_PAGE, rooms.size)
-            val hasMore = !isExpanded && rooms.size > ITEMS_PER_PAGE
-            return visibleCount + (if (hasMore) 1 else 0)
+            val hasToggle = rooms.size > ITEMS_PER_PAGE
+            return visibleCount + (if (hasToggle) 1 else 0)
         }
 
         override fun getItemViewType(position: Int): Int {
@@ -240,6 +244,9 @@ class HouseDetails : AppCompatActivity() {
                     if (p != RecyclerView.NO_POSITION && p < rooms.size) onLongPress(p)
                     true
                 }
+            } else if (holder is MoreHolder) {
+                val button = holder.itemView as android.widget.Button
+                button.text = if (isExpanded) "Show Less Rooms" else "Show More Rooms"
             }
         }
 
