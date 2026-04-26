@@ -1,3 +1,4 @@
+// With support from copilot
 package au.edu.utas.kit305.tutorial05
 
 import com.google.firebase.firestore.Exclude
@@ -9,4 +10,3 @@ class Room(
     var photoUrl: String? = null,
     var photoBase64: String? = null
 )
-

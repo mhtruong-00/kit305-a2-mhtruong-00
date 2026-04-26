@@ -1,4 +1,5 @@
 <resources>
+    <!-- With support from copilot -->
     <string name="app_name">Home Quote</string>
     <string name="error_house_required_fields">Customer name and address are required</string>
     <string name="error_house_save_failed">Could not save house</string>

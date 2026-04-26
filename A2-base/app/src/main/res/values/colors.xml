@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- With support from copilot -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="purple_500">#6200EE</color>
@@ -9,4 +10,3 @@
     <color name="primary_dark">#003c8f</color>
     <color name="accent">#FF6F00</color>
 </resources>
-
