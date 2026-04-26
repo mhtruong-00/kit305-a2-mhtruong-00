@@ -162,13 +162,15 @@ class HouseDetails : AppCompatActivity() {
 
     private fun applyRoomFilter() {
         val q = roomSearchQuery.lowercase()
+        val oldSize = filteredRooms.size
         filteredRooms.clear()
+        ui.lstRooms.adapter?.notifyItemRangeRemoved(0, oldSize)
         if (q.isBlank()) {
             filteredRooms.addAll(roomList)
         } else {
             filteredRooms.addAll(roomList.filter { it.name.orEmpty().lowercase().contains(q) })
         }
-        ui.lstRooms.adapter?.notifyDataSetChanged()
+        ui.lstRooms.adapter?.notifyItemRangeInserted(0, filteredRooms.size)
         ui.lblRoomCount.text = getString(R.string.room_count_format, filteredRooms.size)
     }
 
@@ -195,7 +197,7 @@ class HouseDetails : AppCompatActivity() {
                 RoomHolder(ui)
             } else {
                 val button = android.widget.Button(parent.context)
-                button.text = "Show More Rooms"
+                button.text = parent.context.getString(R.string.show_more_rooms)
                 button.setOnClickListener { onToggleExpand?.invoke() }
                 val params = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -220,7 +222,7 @@ class HouseDetails : AppCompatActivity() {
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             if (holder is RoomHolder && position < rooms.size) {
                 val room = rooms[position]
-                holder.ui.txtName.text = room.name ?: "Unnamed room"
+                holder.ui.txtName.text = room.name ?: holder.ui.root.context.getString(R.string.unnamed_room)
                 holder.ui.txtYear.text = holder.ui.root.context.getString(R.string.label_room)
 
                 // Load and display room photo
@@ -261,13 +263,13 @@ class HouseDetails : AppCompatActivity() {
                 }
             } else if (holder is MoreHolder) {
                 val button = holder.itemView as android.widget.Button
-                button.text = if (isExpanded) "Show Less Rooms" else "Show More Rooms"
+                button.text = if (isExpanded) holder.itemView.context.getString(R.string.show_less_rooms) else holder.itemView.context.getString(R.string.show_more_rooms)
             }
         }
 
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
-            notifyDataSetChanged()
+            notifyItemRangeChanged(0, itemCount)
         }
 
         fun setToggleCallback(callback: (() -> Unit)?) {

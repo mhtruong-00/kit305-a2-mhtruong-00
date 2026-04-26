@@ -290,7 +290,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyHouseFilter() {
         val q = houseSearchQuery.lowercase()
+        val oldSize = filteredHouses.size
         filteredHouses.clear()
+        ui.myList.adapter?.notifyItemRangeRemoved(0, oldSize)
         if (q.isBlank()) {
             filteredHouses.addAll(houses)
         } else {
@@ -302,7 +304,7 @@ class MainActivity : AppCompatActivity() {
                 }
             )
         }
-        ui.myList.adapter?.notifyDataSetChanged()
+        ui.myList.adapter?.notifyItemRangeInserted(0, filteredHouses.size)
         ui.lblMovieCount.text = getString(R.string.house_count_format, filteredHouses.size)
     }
 
@@ -365,8 +367,8 @@ class MainActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             if (holder is HouseHolder && position < houseList.size) {
                 val house = houseList[position]
-                holder.ui.txtName.text = house.customerName ?: "Unnamed customer"
-                holder.ui.txtAddress.text = house.address ?: "No address"
+                holder.ui.txtName.text = house.customerName ?: getString(R.string.unnamed_customer)
+                holder.ui.txtAddress.text = house.address ?: getString(R.string.no_address)
 
                 holder.ui.root.setOnClickListener {
                     val currentPosition = holder.bindingAdapterPosition
@@ -399,13 +401,13 @@ class MainActivity : AppCompatActivity() {
                 }
             } else if (holder is MoreHolder) {
                 val button = holder.itemView as android.widget.Button
-                button.text = if (isExpanded) "Show Less Houses" else "Show More Houses"
+                button.text = if (isExpanded) getString(R.string.show_less_houses) else getString(R.string.show_more_houses)
             }
         }
 
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
-            notifyDataSetChanged()
+            notifyItemRangeChanged(0, itemCount)
         }
 
         fun setToggleCallback(callback: (() -> Unit)?) {
