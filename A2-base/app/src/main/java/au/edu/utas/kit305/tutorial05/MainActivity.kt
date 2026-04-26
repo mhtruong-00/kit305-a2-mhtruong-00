@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
+import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import au.edu.utas.kit305.tutorial05.databinding.ActivityMainBinding
@@ -28,6 +29,8 @@ val houses = mutableListOf<House>()
 class MainActivity : AppCompatActivity() {
     private lateinit var ui: ActivityMainBinding
     private var housesExpanded = false
+    private val filteredHouses = mutableListOf<House>()
+    private var houseSearchQuery: String = ""
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(ui.root)
 
         ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
-        val houseAdapter = HouseAdapter(houseList = houses)
+        val houseAdapter = HouseAdapter(houseList = filteredHouses)
         houseAdapter.setToggleCallback {
             housesExpanded = !housesExpanded
             houseAdapter.setExpanded(housesExpanded)
@@ -45,6 +48,10 @@ class MainActivity : AppCompatActivity() {
 
         ui.myList.layoutManager = LinearLayoutManager(this)
         ui.btnAddHouse.setOnClickListener { addHouse() }
+        ui.txtSearchHouses.doAfterTextChanged {
+            houseSearchQuery = it?.toString()?.trim().orEmpty()
+            applyHouseFilter()
+        }
 
         val db = Firebase.firestore
         Log.d("FIREBASE", "Firebase connected: ${db.app.name}")
@@ -60,8 +67,7 @@ class MainActivity : AppCompatActivity() {
                     house.id = document.id
                     houses.add(house)
                 }
-                ui.myList.adapter?.notifyDataSetChanged()
-                ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
+                applyHouseFilter()
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error reading houses", it)
@@ -71,9 +77,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (houses.isNotEmpty()) {
-            ui.myList.adapter?.notifyItemRangeChanged(0, houses.size)
-        }
+        applyHouseFilter()
     }
 
     private fun addHouse() {
@@ -84,9 +88,7 @@ class MainActivity : AppCompatActivity() {
             .addOnSuccessListener {
                 newHouse.id = it.id
                 houses.add(0, newHouse)
-                // Toggle row can appear/disappear at threshold, so refresh whole list to avoid adapter inconsistency.
-                ui.myList.adapter?.notifyDataSetChanged()
-                ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
+                applyHouseFilter()
                 ui.myList.scrollToPosition(0)
             }
             .addOnFailureListener {
@@ -94,19 +96,16 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun promptDeleteHouse(position: Int) {
-        if (position < 0 || position >= houses.size) return
+    private fun promptDeleteHouse(house: House) {
 
         AlertDialog.Builder(this)
             .setMessage(R.string.delete_house_confirm)
-            .setPositiveButton(R.string.delete) { _, _ -> deleteHouse(position) }
+            .setPositiveButton(R.string.delete) { _, _ -> deleteHouse(house) }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun showEditHouseDialog(position: Int) {
-        if (position < 0 || position >= houses.size) return
-        val house = houses[position]
+    private fun showEditHouseDialog(house: House) {
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -134,15 +133,13 @@ class MainActivity : AppCompatActivity() {
                 val newName = nameEdit.text.toString().trim()
                 val newAddress = addressEdit.text.toString().trim()
                 if (newName.isBlank() || newAddress.isBlank()) return@setPositiveButton
-                updateHouse(position, newName, newAddress)
+                updateHouse(house, newName, newAddress)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun updateHouse(position: Int, customerName: String, address: String) {
-        if (position < 0 || position >= houses.size) return
-        val house = houses[position]
+    private fun updateHouse(house: House, customerName: String, address: String) {
         val houseId = house.id ?: return
 
         val updates = mapOf(
@@ -155,15 +152,14 @@ class MainActivity : AppCompatActivity() {
             .addOnSuccessListener {
                 house.customerName = customerName
                 house.address = address
-                ui.myList.adapter?.notifyItemChanged(position)
+                applyHouseFilter()
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error updating house", it)
             }
     }
 
-    private fun deleteHouse(position: Int) {
-        val house = houses[position]
+    private fun deleteHouse(house: House) {
         val houseId = house.id ?: return
 
         val db = Firebase.firestore
@@ -179,10 +175,8 @@ class MainActivity : AppCompatActivity() {
 
                 batch.commit()
                     .addOnSuccessListener {
-                        houses.removeAt(position)
-                        // Toggle row can appear/disappear at threshold, so refresh whole list to avoid adapter inconsistency.
-                        ui.myList.adapter?.notifyDataSetChanged()
-                        ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
+                        houses.removeAll { it.id == houseId }
+                        applyHouseFilter()
                     }
                     .addOnFailureListener {
                         Log.e(FIREBASE_TAG, "Error deleting house and rooms", it)
@@ -193,9 +187,7 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun openQuoteFromHouse(position: Int) {
-        if (position < 0 || position >= houses.size) return
-        val house = houses[position]
+    private fun openQuoteFromHouse(house: House) {
         val houseId = house.id ?: return
 
         val i = Intent(this, QuoteActivity::class.java)
@@ -204,14 +196,30 @@ class MainActivity : AppCompatActivity() {
         startActivity(i)
     }
 
-    private fun openRoomsFromHouse(position: Int) {
-        if (position < 0 || position >= houses.size) return
-        val house = houses[position]
+    private fun openRoomsFromHouse(house: House) {
         val i = Intent(this, HouseDetails::class.java)
-        i.putExtra(HOUSE_INDEX, position)
+        i.putExtra(HOUSE_INDEX, -1)
         i.putExtra(HOUSE_ID_EXTRA, house.id)
         i.putExtra(HOUSE_NAME_EXTRA, house.customerName ?: "House")
         startActivity(i)
+    }
+
+    private fun applyHouseFilter() {
+        val q = houseSearchQuery.lowercase()
+        filteredHouses.clear()
+        if (q.isBlank()) {
+            filteredHouses.addAll(houses)
+        } else {
+            filteredHouses.addAll(
+                houses.filter { house ->
+                    val name = house.customerName.orEmpty().lowercase()
+                    val address = house.address.orEmpty().lowercase()
+                    name.contains(q) || address.contains(q)
+                }
+            )
+        }
+        ui.myList.adapter?.notifyDataSetChanged()
+        ui.lblMovieCount.text = getString(R.string.house_count_format, filteredHouses.size)
     }
 
     private fun showHouseTapOptions(position: Int) {
@@ -221,7 +229,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle(R.string.house_actions_title)
             .setItems(arrayOf(getString(R.string.edit_house_action), getString(R.string.open_rooms_action))) { _, which ->
                 when (which) {
-                    0 -> showEditHouseDialog(position)
+                    0 -> showEditHouseDialog(houses[position])
                     1 -> {
                         val i = Intent(this, HouseDetails::class.java)
                         i.putExtra(HOUSE_INDEX, position)
@@ -279,31 +287,31 @@ class MainActivity : AppCompatActivity() {
                 holder.ui.root.setOnClickListener {
                     val currentPosition = holder.bindingAdapterPosition
                     if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                    openRoomsFromHouse(currentPosition)
+                    openRoomsFromHouse(house)
                 }
 
                 holder.ui.btnEditHouse.setOnClickListener {
                     val currentPosition = holder.bindingAdapterPosition
                     if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                    showEditHouseDialog(currentPosition)
+                    showEditHouseDialog(house)
                 }
 
                 holder.ui.btnCreateRoomHouse.setOnClickListener {
                     val currentPosition = holder.bindingAdapterPosition
                     if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                    openRoomsFromHouse(currentPosition)
+                    openRoomsFromHouse(house)
                 }
 
                 holder.ui.btnDeleteHouse.setOnClickListener {
                     val currentPosition = holder.bindingAdapterPosition
                     if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                    promptDeleteHouse(currentPosition)
+                    promptDeleteHouse(house)
                 }
 
                 holder.ui.btnViewQuoteHouse.setOnClickListener {
                     val currentPosition = holder.bindingAdapterPosition
                     if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
-                    openQuoteFromHouse(currentPosition)
+                    openQuoteFromHouse(house)
                 }
             } else if (holder is MoreHolder) {
                 val button = holder.itemView as android.widget.Button

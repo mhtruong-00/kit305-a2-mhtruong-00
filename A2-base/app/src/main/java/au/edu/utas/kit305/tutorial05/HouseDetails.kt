@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.widget.doAfterTextChanged
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,8 +23,10 @@ import com.google.firebase.ktx.Firebase
 class HouseDetails : AppCompatActivity() {
     private lateinit var ui: ActivityHouseDetailsBinding
     private val roomList = mutableListOf<Room>()
+    private val filteredRooms = mutableListOf<Room>()
     private var houseId: String? = null
     private var roomsExpanded = false
+    private var roomSearchQuery: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +50,7 @@ class HouseDetails : AppCompatActivity() {
 
         ui.lstRooms.layoutManager = LinearLayoutManager(this)
         val roomAdapter = RoomAdapter(
-            rooms = roomList,
+            rooms = filteredRooms,
             onClick = { position -> openRoomDetails(position) },
             onEdit = { position -> openRoomDetails(position) },
             onDelete = { position -> promptDeleteRoom(position) },
@@ -59,6 +62,10 @@ class HouseDetails : AppCompatActivity() {
         ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
         ui.btnAddRoom.setOnClickListener { addRoom(houseId) }
         ui.btnViewQuote.setOnClickListener { openQuote() }
+        ui.txtSearchRooms.doAfterTextChanged {
+            roomSearchQuery = it?.toString()?.trim().orEmpty()
+            applyRoomFilter()
+        }
 
         loadRooms(houseId)
     }
@@ -69,8 +76,8 @@ class HouseDetails : AppCompatActivity() {
     }
 
     private fun openRoomDetails(position: Int) {
-        if (position < 0 || position >= roomList.size) return
-        val room = roomList[position]
+        if (position < 0 || position >= filteredRooms.size) return
+        val room = filteredRooms[position]
         openRoomDetails(room)
     }
 
@@ -97,8 +104,7 @@ class HouseDetails : AppCompatActivity() {
             .addOnSuccessListener {
                 newRoom.id = it.id
                 roomList.add(0, newRoom)
-                ui.lstRooms.adapter?.notifyItemInserted(0)
-                ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
+                applyRoomFilter()
                 ui.lstRooms.scrollToPosition(0)
             }
             .addOnFailureListener {
@@ -107,24 +113,23 @@ class HouseDetails : AppCompatActivity() {
     }
 
     private fun promptDeleteRoom(position: Int) {
-        if (position < 0 || position >= roomList.size) return
+        if (position < 0 || position >= filteredRooms.size) return
+        val room = filteredRooms[position]
         AlertDialog.Builder(this)
             .setMessage(R.string.delete_room_confirm)
-            .setPositiveButton(R.string.delete) { _, _ -> deleteRoom(position) }
+            .setPositiveButton(R.string.delete) { _, _ -> deleteRoom(room) }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun deleteRoom(position: Int) {
-        val room = roomList[position]
+    private fun deleteRoom(room: Room) {
         val roomId = room.id ?: return
         Firebase.firestore.collection("rooms")
             .document(roomId)
             .delete()
             .addOnSuccessListener {
-                roomList.removeAt(position)
-                ui.lstRooms.adapter?.notifyItemRemoved(position)
-                ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
+                roomList.removeAll { it.id == roomId }
+                applyRoomFilter()
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error deleting room", it)
@@ -134,8 +139,7 @@ class HouseDetails : AppCompatActivity() {
     private fun loadRooms(houseId: String?) {
         if (houseId.isNullOrBlank()) {
             roomList.clear()
-            ui.lstRooms.adapter?.notifyDataSetChanged()
-            ui.lblRoomCount.text = getString(R.string.room_count_format, 0)
+            applyRoomFilter()
             return
         }
         Firebase.firestore.collection("rooms")
@@ -148,13 +152,24 @@ class HouseDetails : AppCompatActivity() {
                     room.id = document.id
                     roomList.add(room)
                 }
-                ui.lstRooms.adapter?.notifyDataSetChanged()
-                ui.lblRoomCount.text = getString(R.string.room_count_format, roomList.size)
+                applyRoomFilter()
             }
             .addOnFailureListener {
                 Log.e(FIREBASE_TAG, "Error reading rooms", it)
-                ui.lblRoomCount.text = getString(R.string.room_count_format, 0)
+                applyRoomFilter()
             }
+    }
+
+    private fun applyRoomFilter() {
+        val q = roomSearchQuery.lowercase()
+        filteredRooms.clear()
+        if (q.isBlank()) {
+            filteredRooms.addAll(roomList)
+        } else {
+            filteredRooms.addAll(roomList.filter { it.name.orEmpty().lowercase().contains(q) })
+        }
+        ui.lstRooms.adapter?.notifyDataSetChanged()
+        ui.lblRoomCount.text = getString(R.string.room_count_format, filteredRooms.size)
     }
 
     class RoomHolder(var ui: MyListItemBinding) : RecyclerView.ViewHolder(ui.root)
