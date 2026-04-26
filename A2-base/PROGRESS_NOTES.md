@@ -1,5 +1,5 @@
 # KIT305 Assignment 2/3/4 — Progress Notes
-**Last updated:** 2026-04-25 (Room photo display + Share feature complete)  
+**Last updated:** 2026-04-19 (quote display + filtering complete)
 **Project:** Android app (Kotlin + Firebase Firestore) — Window/Floor covering quote app
 
 ---
@@ -115,39 +115,32 @@
   - include/exclude floor space checkbox
   - totals update instantly when toggles change
 
-### UI Polish — Room Photo Display ✅ DONE 2026-04-25
-- Room photo display improved with rounded card styling
-- Added "Room Photo" section label above the image for clarity
-- New drawable: `rounded_card_background.xml` (light gray with rounded corners and border)
-- Image view height increased to 220dp for better visibility
-- Photo buttons (Take Photo, From Gallery, Remove Photo) positioned directly below the image
-- Image displays with `centerCrop` scale type for optimal framing
-
 ---
 
 ## ❌ TODO (Remaining Features)
 
-### Feature 8 — Sharing (5 pts) ✅ DONE
-- Share button functional in `QuoteActivity`
-- Quote text built with customer name, address, itemized breakdown
-- Discount amount included in shared text
-- Launches Android share sheet via `Intent.ACTION_SEND`
-- Users can send quote via email, messaging, etc.
+### Feature 8 — Sharing (5 pts)
+**← START HERE NEXT SESSION**
+**What to build:**
+- In `QuoteActivity`, add a Share button
+- Builds a text (or CSV for HD+) summary of the quote
+- Launches `Intent.ACTION_SEND` with `type = "text/plain"`
+
+---
 
 ### Feature 9 — Custom Feature (10 pts)
-**Status:** Not yet started
-**Options to consider:**
-- Map view showing house address (Google Maps) - requires API key
-- PDF export of the quote - would provide professional output
-- Dark/light theme toggle - UI enhancement
-- Search/filter on house list - improves navigation
-- House copy functionality - allow duplication with pre-filled rooms
+**Ideas (pick one):**
+- Map view showing house address (Google Maps)
+- Augmented reality preview of a product on a wall/floor
+- PDF export of the quote
+- Dark/light theme toggle
+- Push notifications when a quote is ready
 
 ---
 
 ### Bonus / Polish
 - Search/filter on house list (for HD+)
-- App icon (for HD+) — Currently in progress with monochrome launcher icon
+- App icon (for HD+)
 - Consistent Material Design theme across all screens
 - Replace `txtYear` label repurposing with proper layout fields
 
