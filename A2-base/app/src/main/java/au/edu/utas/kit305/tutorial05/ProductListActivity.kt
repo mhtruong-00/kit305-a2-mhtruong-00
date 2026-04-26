@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -266,8 +267,11 @@ class ProductListActivity : AppCompatActivity() {
                 "Floor covering"
             }
 
-            // Keep a built-in placeholder icon (no third-party image loader).
-            holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
+            Glide.with(holder.itemView)
+                .load(product.imageUrl)
+                .placeholder(android.R.drawable.ic_menu_gallery)
+                .error(android.R.drawable.ic_menu_report_image)
+                .into(holder.imgProduct)
 
             // Check if this product fits the window dimensions
             val compat = checkCompatibility(product, spaceWidthMm, spaceHeightMm)
