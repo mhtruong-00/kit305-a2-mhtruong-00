@@ -514,7 +514,7 @@ class RoomDetails : AppCompatActivity() {
                 .addOnSuccessListener {
                     w.id = it.id
                     windowList.add(0, w)
-                    lstWindows.adapter?.notifyItemInserted(0)
+                    lstWindows.adapter?.notifyDataSetChanged()
                     lblWindowCount.text = "${windowList.size} Windows"
                     lstWindows.scrollToPosition(0)
                 }
@@ -527,7 +527,7 @@ class RoomDetails : AppCompatActivity() {
         AlertDialog.Builder(this).setMessage("Delete this window?")
             .setPositiveButton("Delete") { _, _ ->
                 Firebase.firestore.collection("windows").document(wId).delete()
-                    .addOnSuccessListener { windowList.removeAt(pos); lstWindows.adapter?.notifyItemRemoved(pos); lblWindowCount.text = "${windowList.size} Windows" }
+                    .addOnSuccessListener { windowList.removeAt(pos); lstWindows.adapter?.notifyDataSetChanged(); lblWindowCount.text = "${windowList.size} Windows" }
                     .addOnFailureListener { Log.e(FIREBASE_TAG, "Error deleting window", it) }
             }.setNegativeButton("Cancel", null).show()
     }
@@ -592,7 +592,7 @@ class RoomDetails : AppCompatActivity() {
                 .addOnSuccessListener {
                     f.id = it.id
                     floorSpaceList.add(0, f)
-                    lstFloorSpaces.adapter?.notifyItemInserted(0)
+                    lstFloorSpaces.adapter?.notifyDataSetChanged()
                     lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces"
                     lstFloorSpaces.scrollToPosition(0)
                 }
@@ -605,7 +605,7 @@ class RoomDetails : AppCompatActivity() {
         AlertDialog.Builder(this).setMessage("Delete this floor space?")
             .setPositiveButton("Delete") { _, _ ->
                 Firebase.firestore.collection("floorspaces").document(fId).delete()
-                    .addOnSuccessListener { floorSpaceList.removeAt(pos); lstFloorSpaces.adapter?.notifyItemRemoved(pos); lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces" }
+                    .addOnSuccessListener { floorSpaceList.removeAt(pos); lstFloorSpaces.adapter?.notifyDataSetChanged(); lblFloorSpaceCount.text = "${floorSpaceList.size} Floor Spaces" }
                     .addOnFailureListener { Log.e(FIREBASE_TAG, "Error deleting floor space", it) }
             }.setNegativeButton("Cancel", null).show()
     }
