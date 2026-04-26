@@ -407,7 +407,7 @@ class MainActivity : AppCompatActivity() {
 
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
-            notifyItemRangeChanged(0, itemCount)
+            notifyDataSetChanged()
         }
 
         fun setToggleCallback(callback: (() -> Unit)?) {

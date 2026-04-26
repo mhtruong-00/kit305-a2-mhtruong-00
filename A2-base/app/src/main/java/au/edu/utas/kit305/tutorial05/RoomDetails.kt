@@ -20,6 +20,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
@@ -58,6 +59,7 @@ class RoomDetails : AppCompatActivity() {
     private lateinit var txtRoomName:         EditText
     private lateinit var lblRoomTitle:        TextView
     private lateinit var btnSaveRoom:         Button
+    private lateinit var roomDetailsScroll:   ScrollView
     private lateinit var lstWindows:          RecyclerView
     private lateinit var lstFloorSpaces:      RecyclerView
     private lateinit var btnAddWindow:        Button
@@ -157,6 +159,7 @@ class RoomDetails : AppCompatActivity() {
         txtRoomName        = findViewById(R.id.txtRoomName)
         lblRoomTitle       = findViewById(R.id.lblRoomTitle)
         btnSaveRoom        = findViewById(R.id.btnSaveRoom)
+        roomDetailsScroll  = findViewById(R.id.roomDetailsScroll)
         lstWindows         = findViewById(R.id.lstWindows)
         lstFloorSpaces     = findViewById(R.id.lstFloorSpaces)
         btnAddWindow       = findViewById(R.id.btnAddWindow)
@@ -213,17 +216,19 @@ class RoomDetails : AppCompatActivity() {
         lstFloorSpaces.adapter = floorAdapter
 
         btnToggleWindows.setOnClickListener {
+            val previousY = roomDetailsScroll.scrollY
             windowsExpanded = !windowsExpanded
             windowsAdapter.setExpanded(windowsExpanded)
-            lstWindows.post { lstWindows.requestLayout() }
             updateToggleButtons()
+            roomDetailsScroll.post { roomDetailsScroll.scrollTo(0, previousY) }
         }
 
         btnToggleFloor.setOnClickListener {
+            val previousY = roomDetailsScroll.scrollY
             floorSpacesExpanded = !floorSpacesExpanded
             floorAdapter.setExpanded(floorSpacesExpanded)
-            lstFloorSpaces.post { lstFloorSpaces.requestLayout() }
             updateToggleButtons()
+            roomDetailsScroll.post { roomDetailsScroll.scrollTo(0, previousY) }
         }
 
         txtSearchWindows.doAfterTextChanged {
@@ -847,7 +852,6 @@ class RoomDetails : AppCompatActivity() {
 
         if (filteredWindowList.size <= 2) windowsExpanded = false
         windowsAdapter.setExpanded(windowsExpanded)
-        lstWindows.post { lstWindows.requestLayout() }
         updateToggleButtons()
     }
 
@@ -868,7 +872,6 @@ class RoomDetails : AppCompatActivity() {
 
         if (filteredFloorSpaceList.size <= 2) floorSpacesExpanded = false
         floorAdapter.setExpanded(floorSpacesExpanded)
-        lstFloorSpaces.post { lstFloorSpaces.requestLayout() }
         updateToggleButtons()
     }
 
@@ -941,7 +944,9 @@ class RoomDetails : AppCompatActivity() {
 
         fun setExpanded(expanded: Boolean) {
             isExpanded = expanded
-            notifyItemRangeChanged(0, itemCount)
+            // Item count changes when expanding/collapsing, so force a full refresh
+            // to avoid RecyclerView position inconsistencies/crashes.
+            notifyDataSetChanged()
         }
 
         private fun bindPhoto(imageView: ImageView, removeButton: Button, photoBase64: String?) {
