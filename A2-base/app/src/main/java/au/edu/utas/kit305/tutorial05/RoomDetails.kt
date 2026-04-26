@@ -36,6 +36,7 @@ import com.google.firebase.firestore.toObject
 import androidx.core.graphics.scale
 import java.io.File
 import java.io.ByteArrayOutputStream
+import java.net.URL
 import kotlin.math.roundToInt
 
 const val HOUSE_ID_EXTRA       = "House_Id"
@@ -45,6 +46,7 @@ class RoomDetails : AppCompatActivity() {
     companion object {
         private const val MIN_DIMENSION_MM = 1
         private const val MAX_DIMENSION_MM = 20_000
+        private const val MAX_IMAGE_DIMENSION = 1280
     }
 
     private enum class PhotoTarget {
@@ -457,7 +459,7 @@ class RoomDetails : AppCompatActivity() {
     }
 
     private fun compressBitmap(bitmap: Bitmap): ByteArray {
-        val scaledBitmap = scaleBitmap(bitmap, 1280)
+        val scaledBitmap = scaleBitmap(bitmap)
         val output = ByteArrayOutputStream()
         var quality = 85
         scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
@@ -471,14 +473,14 @@ class RoomDetails : AppCompatActivity() {
         return output.toByteArray()
     }
 
-    private fun scaleBitmap(bitmap: Bitmap, maxDimension: Int): Bitmap {
+    private fun scaleBitmap(bitmap: Bitmap): Bitmap {
         val largestSide = maxOf(bitmap.width, bitmap.height)
-        if (largestSide <= maxDimension) return bitmap
+        if (largestSide <= MAX_IMAGE_DIMENSION) return bitmap
 
-        val scale = maxDimension.toFloat() / largestSide.toFloat()
-        val width = (bitmap.width * scale).roundToInt()
-        val height = (bitmap.height * scale).roundToInt()
-        return Bitmap.createScaledBitmap(bitmap, width, height, true)
+        val scaleFactor = MAX_IMAGE_DIMENSION.toFloat() / largestSide.toFloat()
+        val width = (bitmap.width * scaleFactor).roundToInt()
+        val height = (bitmap.height * scaleFactor).roundToInt()
+        return bitmap.scale(width, height)
     }
 
     private fun showRoomPhoto(photoBase64: String?, photoUrl: String?) {
@@ -872,7 +874,7 @@ class RoomDetails : AppCompatActivity() {
 
     // ─── Adapter ─────────────────────────────────────────────────────────────
 
-    class MeasurementHolder(val root: android.view.View) : RecyclerView.ViewHolder(root) {
+    class MeasurementHolder(val root: View) : RecyclerView.ViewHolder(root) {
         val txtName:    TextView = root.findViewById(R.id.txtMeasurementName)
         val txtDims:    TextView = root.findViewById(R.id.txtMeasurementDims)
         val txtProduct: TextView = root.findViewById(R.id.txtSelectedProduct)
