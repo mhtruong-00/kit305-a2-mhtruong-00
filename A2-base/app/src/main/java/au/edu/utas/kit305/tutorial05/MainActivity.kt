@@ -27,6 +27,7 @@ val houses = mutableListOf<House>()
 
 class MainActivity : AppCompatActivity() {
     private lateinit var ui: ActivityMainBinding
+    private var housesExpanded = false
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +36,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(ui.root)
 
         ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
-        ui.myList.adapter = HouseAdapter(houseList = houses)
+        val houseAdapter = HouseAdapter(houseList = houses)
+        houseAdapter.setToggleCallback {
+            housesExpanded = !housesExpanded
+            houseAdapter.setExpanded(housesExpanded)
+        }
+        ui.myList.adapter = houseAdapter
 
         ui.myList.layoutManager = LinearLayoutManager(this)
         ui.btnAddHouse.setOnClickListener { addHouse() }
@@ -78,7 +84,8 @@ class MainActivity : AppCompatActivity() {
             .addOnSuccessListener {
                 newHouse.id = it.id
                 houses.add(0, newHouse)
-                ui.myList.adapter?.notifyItemInserted(0)
+                // Toggle row can appear/disappear at threshold, so refresh whole list to avoid adapter inconsistency.
+                ui.myList.adapter?.notifyDataSetChanged()
                 ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
                 ui.myList.scrollToPosition(0)
             }
@@ -173,7 +180,8 @@ class MainActivity : AppCompatActivity() {
                 batch.commit()
                     .addOnSuccessListener {
                         houses.removeAt(position)
-                        ui.myList.adapter?.notifyItemRemoved(position)
+                        // Toggle row can appear/disappear at threshold, so refresh whole list to avoid adapter inconsistency.
+                        ui.myList.adapter?.notifyDataSetChanged()
                         ui.lblMovieCount.text = getString(R.string.house_count_format, houses.size)
                     }
                     .addOnFailureListener {
