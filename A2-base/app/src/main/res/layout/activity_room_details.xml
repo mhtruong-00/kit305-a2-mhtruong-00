@@ -106,11 +106,19 @@
                 android:text="Add Window" />
         </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
+        <au.edu.utas.kit305.tutorial05.WrapContentRecyclerView
             android:id="@+id/lstWindows"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:nestedScrollingEnabled="false" />
+
+        <Button
+            android:id="@+id/btnToggleWindows"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Show More Windows"
+            android:visibility="gone" />
 
         <!-- Floor Spaces Section -->
         <TextView
@@ -141,11 +149,19 @@
                 android:text="Add Floor Space" />
         </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
+        <au.edu.utas.kit305.tutorial05.WrapContentRecyclerView
             android:id="@+id/lstFloorSpaces"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:nestedScrollingEnabled="false" />
+
+        <Button
+            android:id="@+id/btnToggleFloorSpaces"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Show More Floor Spaces"
+            android:visibility="gone" />
 
     </LinearLayout>
 </ScrollView>
