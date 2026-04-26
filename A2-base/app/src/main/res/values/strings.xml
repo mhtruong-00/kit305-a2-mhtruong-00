@@ -52,6 +52,10 @@
     <string name="quote_item_excluded">%1$s excluded from total</string>
     <string name="quote_window_label">window</string>
     <string name="quote_floor_label">floor space</string>
+    <string name="quote_show_more_windows">Show More Windows</string>
+    <string name="quote_show_less_windows">Show Less Windows</string>
+    <string name="quote_show_more_floors">Show More Floor Spaces</string>
+    <string name="quote_show_less_floors">Show Less Floor Spaces</string>
     <string name="share_quote">Share Quote</string>
     <string name="share_quote_chooser">Share quote via</string>
     <string name="quote_share_title_format">Quote for %1$s</string>

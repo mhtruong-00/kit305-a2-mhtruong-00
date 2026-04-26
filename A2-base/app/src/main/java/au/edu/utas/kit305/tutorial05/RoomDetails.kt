@@ -17,6 +17,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -56,6 +57,7 @@ class RoomDetails : AppCompatActivity() {
     private lateinit var btnAddFloorSpace:    android.widget.Button
     private lateinit var lblWindowCount:      android.widget.TextView
     private lateinit var lblFloorSpaceCount:  android.widget.TextView
+    private lateinit var roomDetailsScroll:   ScrollView
     private lateinit var imgRoom:             ImageView
     private lateinit var btnTakePhoto:        android.widget.Button
     private lateinit var btnPickGallery:      android.widget.Button
@@ -136,6 +138,7 @@ class RoomDetails : AppCompatActivity() {
         btnAddFloorSpace   = findViewById(R.id.btnAddFloorSpace)
         lblWindowCount     = findViewById(R.id.lblWindowCount)
         lblFloorSpaceCount = findViewById(R.id.lblFloorSpaceCount)
+        roomDetailsScroll  = findViewById(R.id.roomDetailsScroll)
         imgRoom            = findViewById(R.id.imgRoom)
         btnTakePhoto       = findViewById(R.id.btnTakePhoto)
         btnPickGallery     = findViewById(R.id.btnPickGallery)

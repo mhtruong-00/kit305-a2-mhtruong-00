@@ -26,6 +26,7 @@ class QuoteActivity : AppCompatActivity() {
         private const val DEFAULT_WINDOW_RATE = 50.0
         private const val DEFAULT_FLOOR_RATE = 100.0
         private const val ROOM_LABOUR = 200.0
+        private const val QUOTE_SECTION_PREVIEW_COUNT = 2
     }
 
     private data class RoomQuoteData(
@@ -50,6 +51,8 @@ class QuoteActivity : AppCompatActivity() {
     private var currentUsingDefaults: Boolean = false
     private val includedRooms = mutableMapOf<String, Boolean>()
     private val includedItems = mutableMapOf<String, Boolean>()
+    private val expandedWindowsByRoom = mutableMapOf<String, Boolean>()
+    private val expandedFloorsByRoom = mutableMapOf<String, Boolean>()
     private var discountPercent: Double = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -197,6 +200,8 @@ class QuoteActivity : AppCompatActivity() {
         // Rebuild include maps per fresh quote load to avoid stale hidden states.
         includedRooms.clear()
         includedItems.clear()
+        expandedWindowsByRoom.clear()
+        expandedFloorsByRoom.clear()
 
         for (roomQuote in roomQuotes) {
             val roomId = roomQuote.room.id ?: continue
@@ -308,29 +313,38 @@ class QuoteActivity : AppCompatActivity() {
             if (!hasItems) {
                 layoutQuoteContent.addView(makeText(getString(R.string.quote_no_items), 14f, leftPaddingDp = 12))
             } else {
+                val windowsExpanded = expandedWindowsByRoom[roomId] == true
+                val floorsExpanded = expandedFloorsByRoom[roomId] == true
+
                 roomQuote.windows.forEachIndexed { index, window ->
                     val itemKey = buildItemKey("window", roomId, window.id, window.name ?: "", index)
                     val includeItem = includedItems[itemKey] != false
-                    layoutQuoteContent.addView(
-                        makeItemToggle(
-                            getString(R.string.quote_window_label),
-                            window.name?.ifBlank { "Unnamed" } ?: "Unnamed",
-                            includeItem
-                        ) { checked ->
-                            includedItems[itemKey] = checked
-                            renderRooms()
-                        }
-                    )
+                    val showItem = windowsExpanded || index < QUOTE_SECTION_PREVIEW_COUNT
+
+                    if (showItem) {
+                        layoutQuoteContent.addView(
+                            makeItemToggle(
+                                getString(R.string.quote_window_label),
+                                window.name?.ifBlank { "Unnamed" } ?: "Unnamed",
+                                includeItem
+                            ) { checked ->
+                                includedItems[itemKey] = checked
+                                renderRooms()
+                            }
+                        )
+                    }
 
                     if (!includeItem) {
-                        layoutQuoteContent.addView(
-                            makeText(
-                                getString(R.string.quote_item_excluded, getString(R.string.quote_window_label)),
-                                13f,
-                                leftPaddingDp = 24,
-                                topMarginDp = 4
+                        if (showItem) {
+                            layoutQuoteContent.addView(
+                                makeText(
+                                    getString(R.string.quote_item_excluded, getString(R.string.quote_window_label)),
+                                    13f,
+                                    leftPaddingDp = 24,
+                                    topMarginDp = 4
+                                )
                             )
-                        )
+                        }
                         return@forEachIndexed
                     }
 
@@ -343,6 +357,10 @@ class QuoteActivity : AppCompatActivity() {
                         hasMeasuredIncludedItem = true
                     }
                     roomSubtotal += itemCost
+
+                    if (!showItem) {
+                        return@forEachIndexed
+                    }
 
                     layoutQuoteContent.addView(
                         makeText(
@@ -366,29 +384,47 @@ class QuoteActivity : AppCompatActivity() {
                     }
                 }
 
-                roomQuote.floorSpaces.forEachIndexed { index, floorSpace ->
-                    val itemKey = buildItemKey("floor", roomId, floorSpace.id, floorSpace.name ?: "", index)
-                    val includeItem = includedItems[itemKey] != false
+                if (roomQuote.windows.size > QUOTE_SECTION_PREVIEW_COUNT) {
                     layoutQuoteContent.addView(
-                        makeItemToggle(
-                            getString(R.string.quote_floor_label),
-                            floorSpace.name?.ifBlank { "Unnamed" } ?: "Unnamed",
-                            includeItem
-                        ) { checked ->
-                            includedItems[itemKey] = checked
+                        makeSectionToggleButton(
+                            if (windowsExpanded) getString(R.string.quote_show_less_windows)
+                            else getString(R.string.quote_show_more_windows)
+                        ) {
+                            expandedWindowsByRoom[roomId] = !windowsExpanded
                             renderRooms()
                         }
                     )
+                }
+
+                roomQuote.floorSpaces.forEachIndexed { index, floorSpace ->
+                    val itemKey = buildItemKey("floor", roomId, floorSpace.id, floorSpace.name ?: "", index)
+                    val includeItem = includedItems[itemKey] != false
+                    val showItem = floorsExpanded || index < QUOTE_SECTION_PREVIEW_COUNT
+
+                    if (showItem) {
+                        layoutQuoteContent.addView(
+                            makeItemToggle(
+                                getString(R.string.quote_floor_label),
+                                floorSpace.name?.ifBlank { "Unnamed" } ?: "Unnamed",
+                                includeItem
+                            ) { checked ->
+                                includedItems[itemKey] = checked
+                                renderRooms()
+                            }
+                        )
+                    }
 
                     if (!includeItem) {
-                        layoutQuoteContent.addView(
-                            makeText(
-                                getString(R.string.quote_item_excluded, getString(R.string.quote_floor_label)),
-                                13f,
-                                leftPaddingDp = 24,
-                                topMarginDp = 4
+                        if (showItem) {
+                            layoutQuoteContent.addView(
+                                makeText(
+                                    getString(R.string.quote_item_excluded, getString(R.string.quote_floor_label)),
+                                    13f,
+                                    leftPaddingDp = 24,
+                                    topMarginDp = 4
+                                )
                             )
-                        )
+                        }
                         return@forEachIndexed
                     }
 
@@ -401,6 +437,10 @@ class QuoteActivity : AppCompatActivity() {
                         hasMeasuredIncludedItem = true
                     }
                     roomSubtotal += itemCost
+
+                    if (!showItem) {
+                        return@forEachIndexed
+                    }
 
                     layoutQuoteContent.addView(
                         makeText(
@@ -419,6 +459,18 @@ class QuoteActivity : AppCompatActivity() {
                     layoutQuoteContent.addView(makeText(getString(R.string.quote_item_area_format, area), 13f, leftPaddingDp = 24))
                     layoutQuoteContent.addView(makeText(getString(R.string.quote_item_rate_format, rate), 13f, leftPaddingDp = 24))
                     layoutQuoteContent.addView(makeText(getString(R.string.quote_item_cost_format, itemCost), 13f, leftPaddingDp = 24))
+                }
+
+                if (roomQuote.floorSpaces.size > QUOTE_SECTION_PREVIEW_COUNT) {
+                    layoutQuoteContent.addView(
+                        makeSectionToggleButton(
+                            if (floorsExpanded) getString(R.string.quote_show_less_floors)
+                            else getString(R.string.quote_show_more_floors)
+                        ) {
+                            expandedFloorsByRoom[roomId] = !floorsExpanded
+                            renderRooms()
+                        }
+                    )
                 }
             }
 
@@ -666,6 +718,21 @@ class QuoteActivity : AppCompatActivity() {
                 topMargin = (6 * resources.displayMetrics.density).toInt()
             }
             setOnCheckedChangeListener { _, isChecked -> onChanged(isChecked) }
+        }
+    }
+
+    private fun makeSectionToggleButton(text: String, onClick: () -> Unit): Button {
+        return Button(this).apply {
+            this.text = text
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = (6 * resources.displayMetrics.density).toInt()
+                marginStart = (12 * resources.displayMetrics.density).toInt()
+                marginEnd = (12 * resources.displayMetrics.density).toInt()
+            }
+            setOnClickListener { onClick() }
         }
     }
 }
