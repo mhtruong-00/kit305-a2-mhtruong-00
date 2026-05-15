@@ -1,8 +1,10 @@
 import UIKit
 
 struct PhotoHelper {
+    private static let compressionQuality: CGFloat = 0.7
+
     static func imageToBase64(_ image: UIImage) -> String? {
-        return image.jpegData(compressionQuality: 0.7)?.base64EncodedString()
+        return image.jpegData(compressionQuality: compressionQuality)?.base64EncodedString()
     }
 
     static func base64ToImage(_ base64: String) -> UIImage? {

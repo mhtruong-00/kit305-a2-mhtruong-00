@@ -25,8 +25,7 @@ class ProductListViewController: UITableViewController {
     }
 
     private func loadProducts() {
-        let urlString = "https://utasbot.dev/kit305_2026/product?category=\(category)"
-        guard let url = URL(string: urlString) else { return }
+        guard let url = APIConfig.productURL(category: category) else { return }
 
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             DispatchQueue.main.async {

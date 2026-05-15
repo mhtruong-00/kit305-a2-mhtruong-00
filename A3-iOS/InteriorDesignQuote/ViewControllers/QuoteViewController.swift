@@ -162,9 +162,10 @@ class QuoteViewController: UIViewController {
     //   Room:   offset = 0               recovered via tag / tagRoomMultiplier
     //   Window: offset = tagWindowBase + windowIdx   (windowIdx = 0, 1, 2…)
     //   Floor:  offset = tagFloorBase  + floorIdx    (floorIdx  = 0, 1, 2…)
+    //   tagFloorBase = tagWindowBase + maxWindowsPerRoom (5000) to prevent overlap
     private let tagRoomMultiplier = 10_000
     private let tagWindowBase     = 1
-    private let tagFloorBase      = 5_001
+    private let tagFloorBase      = 5_001   // allows up to 5 000 windows per room
 
     private func loadData() {
         let outerGroup = DispatchGroup()
@@ -172,8 +173,7 @@ class QuoteViewController: UIViewController {
         // Fetch product prices from API (both categories in parallel)
         for category in ["window", "floor"] {
             outerGroup.enter()
-            let urlString = "https://utasbot.dev/kit305_2026/product?category=\(category)"
-            guard let url = URL(string: urlString) else { outerGroup.leave(); continue }
+            guard let url = APIConfig.productURL(category: category) else { outerGroup.leave(); continue }
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
                 if let data = data,
                    let products = try? JSONDecoder().decode([Product].self, from: data) {
