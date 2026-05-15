@@ -159,19 +159,10 @@ class QuoteViewController: UIViewController {
     // MARK: - Data Loading
 
     private var productCache: [String: Double] = [:]
-
-    // Tag encoding for UISwitch controls: tag = roomIndex * tagRoomMultiplier + offset
-    //   Room:   offset = 0                (recovered via tag / tagRoomMultiplier)
-    //   Window: offset = tagWindowBase + windowIdx
-    //   Floor:  offset = tagFloorBase  + floorIdx
-    //
-    // tagFloorBase is set to tagWindowBase + maxWindowsPerRoom so window and floor
-    // offsets never overlap. 1 000 windows per room is a practical upper bound for
-    // this quoting app (a real building would have far fewer windows in a single room).
-    private let tagRoomMultiplier  = 10_000
-    private let tagWindowBase      = 1
-    private let maxWindowsPerRoom  = 1_000   // max windows before floor offsets begin
-    private var tagFloorBase: Int  { tagWindowBase + maxWindowsPerRoom }  // = 1 001
+    private var nextToggleTag = 1
+    private var roomToggleTags: [Int: Int] = [:]
+    private var windowToggleTags: [Int: (roomIndex: Int, itemIndex: Int)] = [:]
+    private var floorToggleTags: [Int: (roomIndex: Int, itemIndex: Int)] = [:]
 
     private func loadData() {
         let outerGroup = DispatchGroup()
@@ -295,24 +286,32 @@ class QuoteViewController: UIViewController {
 
     private func buildItemsUI() {
         itemsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        roomToggleTags.removeAll()
+        windowToggleTags.removeAll()
+        floorToggleTags.removeAll()
+        nextToggleTag = 1
 
         for (roomIndex, qr) in quoteRooms.enumerated() {
+            let roomTag = makeToggleTag()
+            roomToggleTags[roomTag] = roomIndex
             let roomRow = makeToggleRow(
                 text: qr.room.name,
                 isBold: true,
                 isOn: qr.included,
-                tag: roomIndex * tagRoomMultiplier,
+                tag: roomTag,
                 action: #selector(roomToggled(_:))
             )
             itemsStack.addArrangedSubview(roomRow)
 
             for (winIdx, qw) in qr.windows.enumerated() {
                 let cost = windowCost(qw.item)
+                let windowTag = makeToggleTag()
+                windowToggleTags[windowTag] = (roomIndex, winIdx)
                 let row = makeToggleRow(
                     text: "  🪟 \(qw.item.name) ($\(String(format: "%.2f", cost)))",
                     isBold: false,
                     isOn: qw.included,
-                    tag: roomIndex * tagRoomMultiplier + tagWindowBase + winIdx,
+                    tag: windowTag,
                     action: #selector(windowItemToggled(_:))
                 )
                 itemsStack.addArrangedSubview(row)
@@ -320,16 +319,23 @@ class QuoteViewController: UIViewController {
 
             for (floorIdx, qf) in qr.floors.enumerated() {
                 let cost = floorCost(qf.item)
+                let floorTag = makeToggleTag()
+                floorToggleTags[floorTag] = (roomIndex, floorIdx)
                 let row = makeToggleRow(
                     text: "  🏠 \(qf.item.name) ($\(String(format: "%.2f", cost)))",
                     isBold: false,
                     isOn: qf.included,
-                    tag: roomIndex * tagRoomMultiplier + tagFloorBase + floorIdx,
+                    tag: floorTag,
                     action: #selector(floorItemToggled(_:))
                 )
                 itemsStack.addArrangedSubview(row)
             }
         }
+    }
+
+    private func makeToggleTag() -> Int {
+        defer { nextToggleTag += 1 }
+        return nextToggleTag
     }
 
     private func makeToggleRow(text: String, isBold: Bool, isOn: Bool, tag: Int, action: Selector) -> UIView {
@@ -356,26 +362,28 @@ class QuoteViewController: UIViewController {
     // MARK: - Toggle Actions
 
     @objc private func roomToggled(_ sender: UISwitch) {
-        let roomIndex = sender.tag / tagRoomMultiplier
+        guard let roomIndex = roomToggleTags[sender.tag] else { return }
         guard roomIndex < quoteRooms.count else { return }
         quoteRooms[roomIndex].included = sender.isOn
         recalculate()
     }
 
     @objc private func windowItemToggled(_ sender: UISwitch) {
-        let roomIndex = sender.tag / tagRoomMultiplier
-        let itemIndex = (sender.tag % tagRoomMultiplier) - tagWindowBase
+        guard let mapping = windowToggleTags[sender.tag] else { return }
+        let roomIndex = mapping.roomIndex
+        let itemIndex = mapping.itemIndex
         guard roomIndex < quoteRooms.count,
-              itemIndex >= 0, itemIndex < quoteRooms[roomIndex].windows.count else { return }
+               itemIndex >= 0, itemIndex < quoteRooms[roomIndex].windows.count else { return }
         quoteRooms[roomIndex].windows[itemIndex].included = sender.isOn
         recalculate()
     }
 
     @objc private func floorItemToggled(_ sender: UISwitch) {
-        let roomIndex = sender.tag / tagRoomMultiplier
-        let itemIndex = (sender.tag % tagRoomMultiplier) - tagFloorBase
+        guard let mapping = floorToggleTags[sender.tag] else { return }
+        let roomIndex = mapping.roomIndex
+        let itemIndex = mapping.itemIndex
         guard roomIndex < quoteRooms.count,
-              itemIndex >= 0, itemIndex < quoteRooms[roomIndex].floors.count else { return }
+               itemIndex >= 0, itemIndex < quoteRooms[roomIndex].floors.count else { return }
         quoteRooms[roomIndex].floors[itemIndex].included = sender.isOn
         recalculate()
     }
