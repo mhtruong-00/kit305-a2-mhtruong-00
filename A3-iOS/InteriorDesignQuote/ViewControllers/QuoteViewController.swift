@@ -231,11 +231,6 @@ class QuoteViewController: UIViewController {
     private var productCache: [String: Double] = [:]  // productId -> pricePerSqm
 
     private func loadProductPricesAndRecalculate() {
-        let allProductIds = Set(
-            quoteRooms.flatMap { qr in
-                qr.windowItems.map { _ in "" } + qr.floorItems.map { _ in "" }
-            }
-        )
         // Re-fetch products for pricing
         let group = DispatchGroup()
         for category in ["window", "floor"] {
@@ -336,7 +331,7 @@ class QuoteViewController: UIViewController {
 
     @objc private func floorItemToggled(_ sender: UISwitch) {
         let roomIndex = sender.tag / 10000
-        let itemIndex = (sender.tag % 10000) - 5001
+        let itemIndex = (sender.tag % 10000) - 5001  // tag = roomIndex*10000 + 5000 + floorIdx + 1, so offset is 5001
         guard roomIndex < quoteRooms.count, itemIndex >= 0, itemIndex < quoteRooms[roomIndex].floorItems.count else { return }
         quoteRooms[roomIndex].floorItems[itemIndex].included = sender.isOn
         recalculate()

@@ -333,10 +333,10 @@ class RoomDetailViewController: UIViewController {
     }
 
     @objc private func pickRoomPhoto() {
+        currentPhotoTarget = .room
         let picker = UIImagePickerController()
         picker.sourceType = .photoLibrary
         picker.delegate = self
-        picker.view.tag = -1  // room photo tag
         present(picker, animated: true)
     }
 
@@ -556,16 +556,18 @@ class RoomDetailViewController: UIViewController {
 
     // MARK: - Photo Picker
 
-    private var photoItemType: ItemType?
-    private var photoItemId: String?
+    private enum PhotoTarget {
+        case room
+        case item(type: ItemType, id: String)
+    }
+
+    private var currentPhotoTarget: PhotoTarget?
 
     private func pickPhoto(for itemType: ItemType, itemId: String) {
-        photoItemType = itemType
-        photoItemId = itemId
+        currentPhotoTarget = .item(type: itemType, id: itemId)
         let picker = UIImagePickerController()
         picker.sourceType = .photoLibrary
         picker.delegate = self
-        picker.view.tag = 0
         present(picker, animated: true)
     }
 
@@ -721,22 +723,25 @@ extension RoomDetailViewController: UIImagePickerControllerDelegate, UINavigatio
     func imagePickerController(_ picker: UIImagePickerController,
                                didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
         picker.dismiss(animated: true)
-        guard let image = info[.originalImage] as? UIImage else { return }
-        guard let base64 = PhotoHelper.imageToBase64(image) else { return }
+        guard let image = info[.originalImage] as? UIImage,
+              let base64 = PhotoHelper.imageToBase64(image) else { return }
 
-        if picker.view.tag == -1 {
-            // Room photo
+        switch currentPhotoTarget {
+        case .room:
             roomPhotoImageView.image = image
             db.collection("rooms").document(room.id).updateData(["photoBase64": base64]) { [weak self] error in
                 if let error = error { self?.showAlert(title: "Error", message: error.localizedDescription) }
             }
             room.photoBase64 = base64
-        } else if let itemType = photoItemType, let itemId = photoItemId {
+        case .item(let itemType, let itemId):
             let collection = itemType == .window ? "windows" : "floorspaces"
             db.collection(collection).document(itemId).updateData(["photoBase64": base64]) { [weak self] error in
                 if let error = error { self?.showAlert(title: "Error", message: error.localizedDescription) }
             }
+        case .none:
+            break
         }
+        currentPhotoTarget = nil
     }
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
