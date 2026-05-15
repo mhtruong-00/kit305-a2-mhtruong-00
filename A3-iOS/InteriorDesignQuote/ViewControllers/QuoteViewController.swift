@@ -3,17 +3,21 @@ import FirebaseFirestore
 
 // MARK: - Quote Data Models
 
-private struct QuoteItem {
-    let name: String
-    let cost: Double
+private struct QuoteWindow {
+    let item: WindowItem
+    var included: Bool
+}
+
+private struct QuoteFloor {
+    let item: FloorSpace
     var included: Bool
 }
 
 private struct QuoteRoom {
     let room: Room
     var included: Bool
-    var windowItems: [QuoteItem]
-    var floorItems: [QuoteItem]
+    var windows: [QuoteWindow]
+    var floors: [QuoteFloor]
 }
 
 class QuoteViewController: UIViewController {
@@ -154,6 +158,14 @@ class QuoteViewController: UIViewController {
 
     private var productCache: [String: Double] = [:]  // productId -> pricePerSqm
 
+    // Tag encoding constants: tag = roomIndex * tagRoomMultiplier + offset
+    //   Room:   offset = 0               recovered via tag / tagRoomMultiplier
+    //   Window: offset = tagWindowBase + windowIdx   (windowIdx = 0, 1, 2…)
+    //   Floor:  offset = tagFloorBase  + floorIdx    (floorIdx  = 0, 1, 2…)
+    private let tagRoomMultiplier = 10_000
+    private let tagWindowBase     = 1
+    private let tagFloorBase      = 5_001
+
     private func loadData() {
         let outerGroup = DispatchGroup()
 
@@ -165,69 +177,74 @@ class QuoteViewController: UIViewController {
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
                 if let data = data,
                    let products = try? JSONDecoder().decode([Product].self, from: data) {
-                    for p in products {
-                        self?.productCache[p.id] = p.pricePerSqm
+                    DispatchQueue.main.async {
+                        for p in products { self?.productCache[p.id] = p.pricePerSqm }
+                        outerGroup.leave()
                     }
+                } else {
+                    outerGroup.leave()
                 }
-                outerGroup.leave()
             }.resume()
         }
 
-        // Fetch rooms from Firestore
+        // Fetch rooms + their windows/floors from Firestore
         outerGroup.enter()
         var fetchedQuoteRooms: [QuoteRoom] = []
 
         db.collection("rooms").whereField("houseId", isEqualTo: house.id).getDocuments { [weak self] snap, error in
             guard let self = self else { outerGroup.leave(); return }
-            if let error = error { self.showAlert(title: "Error", message: error.localizedDescription); outerGroup.leave(); return }
-            let rooms = (snap?.documents.compactMap { Room(id: $0.documentID, data: $0.data()) } ?? []).sorted { $0.name < $1.name }
+            if let error = error {
+                self.showAlert(title: "Error", message: error.localizedDescription)
+                outerGroup.leave()
+                return
+            }
+            let rooms = (snap?.documents.compactMap { Room(id: $0.documentID, data: $0.data()) } ?? [])
+                .sorted { $0.name < $1.name }
+
+            guard !rooms.isEmpty else { outerGroup.leave(); return }
 
             let roomGroup = DispatchGroup()
             for room in rooms {
                 roomGroup.enter()
-                var windowItems: [QuoteItem] = []
-                var floorItems: [QuoteItem] = []
+                var rawWindows: [WindowItem] = []
+                var rawFloors: [FloorSpace] = []
                 let innerGroup = DispatchGroup()
 
                 innerGroup.enter()
                 self.db.collection("windows").whereField("roomId", isEqualTo: room.id).getDocuments { wSnap, _ in
-                    let windows = wSnap?.documents.compactMap { WindowItem(id: $0.documentID, data: $0.data()) } ?? []
-                    windowItems = windows.map { w in
-                        QuoteItem(name: w.name, cost: self.windowCost(w), included: true)
-                    }
+                    rawWindows = wSnap?.documents.compactMap { WindowItem(id: $0.documentID, data: $0.data()) } ?? []
                     innerGroup.leave()
                 }
                 innerGroup.enter()
                 self.db.collection("floorspaces").whereField("roomId", isEqualTo: room.id).getDocuments { fSnap, _ in
-                    let floors = fSnap?.documents.compactMap { FloorSpace(id: $0.documentID, data: $0.data()) } ?? []
-                    floorItems = floors.map { f in
-                        QuoteItem(name: f.name, cost: self.floorCost(f), included: true)
-                    }
+                    rawFloors = fSnap?.documents.compactMap { FloorSpace(id: $0.documentID, data: $0.data()) } ?? []
                     innerGroup.leave()
                 }
                 innerGroup.notify(queue: .main) {
-                    fetchedQuoteRooms.append(QuoteRoom(room: room, included: true, windowItems: windowItems, floorItems: floorItems))
+                    fetchedQuoteRooms.append(QuoteRoom(
+                        room: room,
+                        included: true,
+                        windows: rawWindows.map { QuoteWindow(item: $0, included: true) },
+                        floors: rawFloors.map { QuoteFloor(item: $0, included: true) }
+                    ))
                     roomGroup.leave()
                 }
             }
             roomGroup.notify(queue: .main) {
-                fetchedQuoteRooms.sort { $0.room.name < $1.room.name }
+                self.quoteRooms = fetchedQuoteRooms.sorted { $0.room.name < $1.room.name }
                 outerGroup.leave()
-                // Store rooms so outerGroup.notify can pick them up
-                self.quoteRooms = fetchedQuoteRooms
             }
         }
 
+        // After all API + Firestore calls complete, costs are computed on-demand using the cache
         outerGroup.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
-            // Recompute costs now that the product cache may be populated
-            // (API and Firestore completed in any order)
             self.buildItemsUI()
             self.recalculate()
         }
     }
 
-    // MARK: - Cost Calculation
+    // MARK: - Cost Calculation (uses productCache populated by loadData)
 
     private func windowCost(_ w: WindowItem) -> Double {
         guard let width = w.widthMm, let height = w.heightMm,
@@ -255,28 +272,30 @@ class QuoteViewController: UIViewController {
                 text: qr.room.name,
                 isBold: true,
                 isOn: qr.included,
-                tag: roomIndex * 10000,
+                tag: roomIndex * tagRoomMultiplier,
                 action: #selector(roomToggled(_:))
             )
             itemsStack.addArrangedSubview(roomRow)
 
-            for (winIdx, item) in qr.windowItems.enumerated() {
+            for (winIdx, qw) in qr.windows.enumerated() {
+                let cost = windowCost(qw.item)
                 let row = makeToggleRow(
-                    text: "  🪟 \(item.name)",
+                    text: "  🪟 \(qw.item.name) ($\(String(format: "%.2f", cost)))",
                     isBold: false,
-                    isOn: item.included,
-                    tag: roomIndex * 10000 + winIdx + 1,
+                    isOn: qw.included,
+                    tag: roomIndex * tagRoomMultiplier + tagWindowBase + winIdx,
                     action: #selector(windowItemToggled(_:))
                 )
                 itemsStack.addArrangedSubview(row)
             }
 
-            for (floorIdx, item) in qr.floorItems.enumerated() {
+            for (floorIdx, qf) in qr.floors.enumerated() {
+                let cost = floorCost(qf.item)
                 let row = makeToggleRow(
-                    text: "  🏠 \(item.name)",
+                    text: "  🏠 \(qf.item.name) ($\(String(format: "%.2f", cost)))",
                     isBold: false,
-                    isOn: item.included,
-                    tag: roomIndex * 10000 + 5000 + floorIdx + 1,
+                    isOn: qf.included,
+                    tag: roomIndex * tagRoomMultiplier + tagFloorBase + floorIdx,
                     action: #selector(floorItemToggled(_:))
                 )
                 itemsStack.addArrangedSubview(row)
@@ -308,25 +327,27 @@ class QuoteViewController: UIViewController {
     // MARK: - Toggle Actions
 
     @objc private func roomToggled(_ sender: UISwitch) {
-        let roomIndex = sender.tag / 10000
+        let roomIndex = sender.tag / tagRoomMultiplier
         guard roomIndex < quoteRooms.count else { return }
         quoteRooms[roomIndex].included = sender.isOn
         recalculate()
     }
 
     @objc private func windowItemToggled(_ sender: UISwitch) {
-        let roomIndex = sender.tag / 10000
-        let itemIndex = (sender.tag % 10000) - 1
-        guard roomIndex < quoteRooms.count, itemIndex < quoteRooms[roomIndex].windowItems.count else { return }
-        quoteRooms[roomIndex].windowItems[itemIndex].included = sender.isOn
+        let roomIndex = sender.tag / tagRoomMultiplier
+        let itemIndex = (sender.tag % tagRoomMultiplier) - tagWindowBase
+        guard roomIndex < quoteRooms.count,
+              itemIndex >= 0, itemIndex < quoteRooms[roomIndex].windows.count else { return }
+        quoteRooms[roomIndex].windows[itemIndex].included = sender.isOn
         recalculate()
     }
 
     @objc private func floorItemToggled(_ sender: UISwitch) {
-        let roomIndex = sender.tag / 10000
-        let itemIndex = (sender.tag % 10000) - 5001  // tag = roomIndex*10000 + 5000 + floorIdx + 1, so offset is 5001
-        guard roomIndex < quoteRooms.count, itemIndex >= 0, itemIndex < quoteRooms[roomIndex].floorItems.count else { return }
-        quoteRooms[roomIndex].floorItems[itemIndex].included = sender.isOn
+        let roomIndex = sender.tag / tagRoomMultiplier
+        let itemIndex = (sender.tag % tagRoomMultiplier) - tagFloorBase
+        guard roomIndex < quoteRooms.count,
+              itemIndex >= 0, itemIndex < quoteRooms[roomIndex].floors.count else { return }
+        quoteRooms[roomIndex].floors[itemIndex].included = sender.isOn
         recalculate()
     }
 
@@ -344,11 +365,11 @@ class QuoteViewController: UIViewController {
 
         for qr in quoteRooms where qr.included {
             labourTotal += labourPerRoom
-            for item in qr.windowItems where item.included {
-                itemSubtotal += item.cost
+            for qw in qr.windows where qw.included {
+                itemSubtotal += windowCost(qw.item)
             }
-            for item in qr.floorItems where item.included {
-                itemSubtotal += item.cost
+            for qf in qr.floors where qf.included {
+                itemSubtotal += floorCost(qf.item)
             }
         }
 
@@ -396,13 +417,15 @@ class QuoteViewController: UIViewController {
         for qr in quoteRooms where qr.included {
             lines.append("Room: \(qr.room.name)")
             labourTotal += labourPerRoom
-            for item in qr.windowItems where item.included {
-                lines.append("  Window - \(item.name): $\(String(format: "%.2f", item.cost))")
-                itemSubtotal += item.cost
+            for qw in qr.windows where qw.included {
+                let cost = windowCost(qw.item)
+                lines.append("  Window - \(qw.item.name): $\(String(format: "%.2f", cost))")
+                itemSubtotal += cost
             }
-            for item in qr.floorItems where item.included {
-                lines.append("  Floor - \(item.name): $\(String(format: "%.2f", item.cost))")
-                itemSubtotal += item.cost
+            for qf in qr.floors where qf.included {
+                let cost = floorCost(qf.item)
+                lines.append("  Floor - \(qf.item.name): $\(String(format: "%.2f", cost))")
+                itemSubtotal += cost
             }
             lines.append("")
         }
@@ -422,11 +445,13 @@ class QuoteViewController: UIViewController {
     private func buildCSV() -> String {
         var rows: [String] = ["Room,Type,Item,Cost"]
         for qr in quoteRooms where qr.included {
-            for item in qr.windowItems where item.included {
-                rows.append("\"\(qr.room.name)\",Window,\"\(item.name)\",\(String(format: "%.2f", item.cost))")
+            for qw in qr.windows where qw.included {
+                let cost = windowCost(qw.item)
+                rows.append("\"\(qr.room.name)\",Window,\"\(qw.item.name)\",\(String(format: "%.2f", cost))")
             }
-            for item in qr.floorItems where item.included {
-                rows.append("\"\(qr.room.name)\",Floor,\"\(item.name)\",\(String(format: "%.2f", item.cost))")
+            for qf in qr.floors where qf.included {
+                let cost = floorCost(qf.item)
+                rows.append("\"\(qr.room.name)\",Floor,\"\(qf.item.name)\",\(String(format: "%.2f", cost))")
             }
         }
         return rows.joined(separator: "\n")
