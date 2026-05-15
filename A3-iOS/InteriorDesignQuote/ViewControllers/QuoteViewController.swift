@@ -158,14 +158,18 @@ class QuoteViewController: UIViewController {
 
     private var productCache: [String: Double] = [:]  // productId -> pricePerSqm
 
-    // Tag encoding constants: tag = roomIndex * tagRoomMultiplier + offset
-    //   Room:   offset = 0               recovered via tag / tagRoomMultiplier
-    //   Window: offset = tagWindowBase + windowIdx   (windowIdx = 0, 1, 2…)
-    //   Floor:  offset = tagFloorBase  + floorIdx    (floorIdx  = 0, 1, 2…)
-    //   tagFloorBase = tagWindowBase + maxWindowsPerRoom (5000) to prevent overlap
-    private let tagRoomMultiplier = 10_000
-    private let tagWindowBase     = 1
-    private let tagFloorBase      = 5_001   // allows up to 5 000 windows per room
+    // Tag encoding for UISwitch controls: tag = roomIndex * tagRoomMultiplier + offset
+    //   Room:   offset = 0                (recovered via tag / tagRoomMultiplier)
+    //   Window: offset = tagWindowBase + windowIdx
+    //   Floor:  offset = tagFloorBase  + floorIdx
+    //
+    // tagFloorBase is set to tagWindowBase + maxWindowsPerRoom so window and floor
+    // offsets never overlap. 1 000 windows per room is a practical upper bound for
+    // this quoting app (a real building would have far fewer windows in a single room).
+    private let tagRoomMultiplier  = 10_000
+    private let tagWindowBase      = 1
+    private let maxWindowsPerRoom  = 1_000   // max windows before floor offsets begin
+    private var tagFloorBase: Int  { tagWindowBase + maxWindowsPerRoom }  // = 1 001
 
     private func loadData() {
         let outerGroup = DispatchGroup()
