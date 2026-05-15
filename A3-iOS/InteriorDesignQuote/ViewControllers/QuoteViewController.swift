@@ -20,6 +20,12 @@ private struct QuoteRoom {
     var floors: [QuoteFloor]
 }
 
+private enum ToggleTarget {
+    case room(Int)
+    case window(roomIndex: Int, itemIndex: Int)
+    case floor(roomIndex: Int, itemIndex: Int)
+}
+
 class QuoteViewController: UIViewController {
 
     var house: House!
@@ -160,9 +166,7 @@ class QuoteViewController: UIViewController {
 
     private var productCache: [String: Double] = [:]
     private var nextToggleTag = 1
-    private var roomToggleTags: [Int: Int] = [:]
-    private var windowToggleTags: [Int: (roomIndex: Int, itemIndex: Int)] = [:]
-    private var floorToggleTags: [Int: (roomIndex: Int, itemIndex: Int)] = [:]
+    private var toggleTargets: [Int: ToggleTarget] = [:]
 
     private func loadData() {
         let outerGroup = DispatchGroup()
@@ -286,14 +290,12 @@ class QuoteViewController: UIViewController {
 
     private func buildItemsUI() {
         itemsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        roomToggleTags.removeAll()
-        windowToggleTags.removeAll()
-        floorToggleTags.removeAll()
+        toggleTargets.removeAll()
         nextToggleTag = 1
 
         for (roomIndex, qr) in quoteRooms.enumerated() {
             let roomTag = makeToggleTag()
-            roomToggleTags[roomTag] = roomIndex
+            toggleTargets[roomTag] = .room(roomIndex)
             let roomRow = makeToggleRow(
                 text: qr.room.name,
                 isBold: true,
@@ -306,7 +308,7 @@ class QuoteViewController: UIViewController {
             for (winIdx, qw) in qr.windows.enumerated() {
                 let cost = windowCost(qw.item)
                 let windowTag = makeToggleTag()
-                windowToggleTags[windowTag] = (roomIndex, winIdx)
+                toggleTargets[windowTag] = .window(roomIndex: roomIndex, itemIndex: winIdx)
                 let row = makeToggleRow(
                     text: "  🪟 \(qw.item.name) ($\(String(format: "%.2f", cost)))",
                     isBold: false,
@@ -320,7 +322,7 @@ class QuoteViewController: UIViewController {
             for (floorIdx, qf) in qr.floors.enumerated() {
                 let cost = floorCost(qf.item)
                 let floorTag = makeToggleTag()
-                floorToggleTags[floorTag] = (roomIndex, floorIdx)
+                toggleTargets[floorTag] = .floor(roomIndex: roomIndex, itemIndex: floorIdx)
                 let row = makeToggleRow(
                     text: "  🏠 \(qf.item.name) ($\(String(format: "%.2f", cost)))",
                     isBold: false,
@@ -362,16 +364,14 @@ class QuoteViewController: UIViewController {
     // MARK: - Toggle Actions
 
     @objc private func roomToggled(_ sender: UISwitch) {
-        guard let roomIndex = roomToggleTags[sender.tag] else { return }
+        guard case let .room(roomIndex)? = toggleTargets[sender.tag] else { return }
         guard roomIndex < quoteRooms.count else { return }
         quoteRooms[roomIndex].included = sender.isOn
         recalculate()
     }
 
     @objc private func windowItemToggled(_ sender: UISwitch) {
-        guard let mapping = windowToggleTags[sender.tag] else { return }
-        let roomIndex = mapping.roomIndex
-        let itemIndex = mapping.itemIndex
+        guard case let .window(roomIndex, itemIndex)? = toggleTargets[sender.tag] else { return }
         guard roomIndex < quoteRooms.count,
                itemIndex >= 0, itemIndex < quoteRooms[roomIndex].windows.count else { return }
         quoteRooms[roomIndex].windows[itemIndex].included = sender.isOn
@@ -379,9 +379,7 @@ class QuoteViewController: UIViewController {
     }
 
     @objc private func floorItemToggled(_ sender: UISwitch) {
-        guard let mapping = floorToggleTags[sender.tag] else { return }
-        let roomIndex = mapping.roomIndex
-        let itemIndex = mapping.itemIndex
+        guard case let .floor(roomIndex, itemIndex)? = toggleTargets[sender.tag] else { return }
         guard roomIndex < quoteRooms.count,
                itemIndex >= 0, itemIndex < quoteRooms[roomIndex].floors.count else { return }
         quoteRooms[roomIndex].floors[itemIndex].included = sender.isOn

@@ -26,7 +26,11 @@ enum FirestoreValue {
         if let value = data[key] as? Int { return value }
         if let value = data[key] as? Int64 { return Int(value) }
         if let value = data[key] as? Double { return Int(value) }
-        if let value = data[key] as? NSNumber { return value.intValue }
+        if let value = data[key] as? NSNumber {
+            let truncated = value.doubleValue.rounded(.towardZero)
+            guard truncated >= Double(Int.min), truncated <= Double(Int.max) else { return nil }
+            return Int(truncated)
+        }
         if let value = data[key] as? String { return Int(value) }
         return nil
     }
