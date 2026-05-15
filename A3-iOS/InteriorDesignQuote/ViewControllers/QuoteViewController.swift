@@ -152,91 +152,16 @@ class QuoteViewController: UIViewController {
 
     // MARK: - Data Loading
 
-    private func loadData() {
-        db.collection("rooms").whereField("houseId", isEqualTo: house.id).getDocuments { [weak self] snap, error in
-            guard let self = self else { return }
-            if let error = error { self.showAlert(title: "Error", message: error.localizedDescription); return }
-            let rooms = snap?.documents.compactMap { Room(id: $0.documentID, data: $0.data()) } ?? []
-            let sortedRooms = rooms.sorted { $0.name < $1.name }
-
-            let group = DispatchGroup()
-            var quoteRooms: [QuoteRoom] = []
-
-            for room in sortedRooms {
-                group.enter()
-                var windowItems: [QuoteItem] = []
-                var floorItems: [QuoteItem] = []
-
-                let innerGroup = DispatchGroup()
-
-                innerGroup.enter()
-                self.db.collection("windows").whereField("roomId", isEqualTo: room.id).getDocuments { wSnap, _ in
-                    let windows = wSnap?.documents.compactMap { WindowItem(id: $0.documentID, data: $0.data()) } ?? []
-                    for w in windows {
-                        let cost = self.windowCost(w)
-                        windowItems.append(QuoteItem(name: w.name, cost: cost, included: true))
-                    }
-                    innerGroup.leave()
-                }
-
-                innerGroup.enter()
-                self.db.collection("floorspaces").whereField("roomId", isEqualTo: room.id).getDocuments { fSnap, _ in
-                    let floors = fSnap?.documents.compactMap { FloorSpace(id: $0.documentID, data: $0.data()) } ?? []
-                    for f in floors {
-                        let cost = self.floorCost(f)
-                        floorItems.append(QuoteItem(name: f.name, cost: cost, included: true))
-                    }
-                    innerGroup.leave()
-                }
-
-                innerGroup.notify(queue: .main) {
-                    quoteRooms.append(QuoteRoom(
-                        room: room,
-                        included: true,
-                        windowItems: windowItems,
-                        floorItems: floorItems
-                    ))
-                    group.leave()
-                }
-            }
-
-            group.notify(queue: .main) {
-                self.quoteRooms = quoteRooms.sorted { $0.room.name < $1.room.name }
-                self.buildItemsUI()
-                self.recalculate()
-            }
-        }
-    }
-
-    // MARK: - Cost Calculation
-
-    private func windowCost(_ w: WindowItem) -> Double {
-        guard let width = w.widthMm, let height = w.heightMm, w.selectedProductId != nil else { return 0 }
-        let areaSqm = (width * height) / 1_000_000.0
-        // pricePerSqm is not stored locally; we'd need to re-fetch from API or store it
-        // For quote we use stored product data — price not in Firestore, so we show 0 unless re-fetched
-        // To make this work without API re-fetch, we'd need to store price. For now return area * panels
-        // This is a known limitation — proper implementation would cache the price.
-        return areaSqm * Double(w.panelCount)
-    }
-
-    private func floorCost(_ f: FloorSpace) -> Double {
-        guard let width = f.widthMm, let depth = f.depthMm, f.selectedProductId != nil else { return 0 }
-        let areaSqm = (width * depth) / 1_000_000.0
-        return areaSqm
-    }
-
-    // MARK: - Product-aware calculation (fetches prices from API)
-
     private var productCache: [String: Double] = [:]  // productId -> pricePerSqm
 
-    private func loadProductPricesAndRecalculate() {
-        // Re-fetch products for pricing
-        let group = DispatchGroup()
+    private func loadData() {
+        let outerGroup = DispatchGroup()
+
+        // Fetch product prices from API (both categories in parallel)
         for category in ["window", "floor"] {
-            group.enter()
+            outerGroup.enter()
             let urlString = "https://utasbot.dev/kit305_2026/product?category=\(category)"
-            guard let url = URL(string: urlString) else { group.leave(); continue }
+            guard let url = URL(string: urlString) else { outerGroup.leave(); continue }
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
                 if let data = data,
                    let products = try? JSONDecoder().decode([Product].self, from: data) {
@@ -244,12 +169,80 @@ class QuoteViewController: UIViewController {
                         self?.productCache[p.id] = p.pricePerSqm
                     }
                 }
-                group.leave()
+                outerGroup.leave()
             }.resume()
         }
-        group.notify(queue: .main) { [weak self] in
-            self?.recalculate()
+
+        // Fetch rooms from Firestore
+        outerGroup.enter()
+        var fetchedQuoteRooms: [QuoteRoom] = []
+
+        db.collection("rooms").whereField("houseId", isEqualTo: house.id).getDocuments { [weak self] snap, error in
+            guard let self = self else { outerGroup.leave(); return }
+            if let error = error { self.showAlert(title: "Error", message: error.localizedDescription); outerGroup.leave(); return }
+            let rooms = (snap?.documents.compactMap { Room(id: $0.documentID, data: $0.data()) } ?? []).sorted { $0.name < $1.name }
+
+            let roomGroup = DispatchGroup()
+            for room in rooms {
+                roomGroup.enter()
+                var windowItems: [QuoteItem] = []
+                var floorItems: [QuoteItem] = []
+                let innerGroup = DispatchGroup()
+
+                innerGroup.enter()
+                self.db.collection("windows").whereField("roomId", isEqualTo: room.id).getDocuments { wSnap, _ in
+                    let windows = wSnap?.documents.compactMap { WindowItem(id: $0.documentID, data: $0.data()) } ?? []
+                    windowItems = windows.map { w in
+                        QuoteItem(name: w.name, cost: self.windowCost(w), included: true)
+                    }
+                    innerGroup.leave()
+                }
+                innerGroup.enter()
+                self.db.collection("floorspaces").whereField("roomId", isEqualTo: room.id).getDocuments { fSnap, _ in
+                    let floors = fSnap?.documents.compactMap { FloorSpace(id: $0.documentID, data: $0.data()) } ?? []
+                    floorItems = floors.map { f in
+                        QuoteItem(name: f.name, cost: self.floorCost(f), included: true)
+                    }
+                    innerGroup.leave()
+                }
+                innerGroup.notify(queue: .main) {
+                    fetchedQuoteRooms.append(QuoteRoom(room: room, included: true, windowItems: windowItems, floorItems: floorItems))
+                    roomGroup.leave()
+                }
+            }
+            roomGroup.notify(queue: .main) {
+                fetchedQuoteRooms.sort { $0.room.name < $1.room.name }
+                outerGroup.leave()
+                // Store rooms so outerGroup.notify can pick them up
+                self.quoteRooms = fetchedQuoteRooms
+            }
         }
+
+        outerGroup.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            // Recompute costs now that the product cache may be populated
+            // (API and Firestore completed in any order)
+            self.buildItemsUI()
+            self.recalculate()
+        }
+    }
+
+    // MARK: - Cost Calculation
+
+    private func windowCost(_ w: WindowItem) -> Double {
+        guard let width = w.widthMm, let height = w.heightMm,
+              let productId = w.selectedProductId, !productId.isEmpty else { return 0 }
+        let pricePerSqm = productCache[productId] ?? 0
+        let areaSqm = (width * height) / 1_000_000.0
+        return areaSqm * pricePerSqm * Double(w.panelCount)
+    }
+
+    private func floorCost(_ f: FloorSpace) -> Double {
+        guard let width = f.widthMm, let depth = f.depthMm,
+              let productId = f.selectedProductId, !productId.isEmpty else { return 0 }
+        let pricePerSqm = productCache[productId] ?? 0
+        let areaSqm = (width * depth) / 1_000_000.0
+        return areaSqm * pricePerSqm
     }
 
     // MARK: - UI Building
