@@ -1,0 +1,7 @@
+platform :ios, '15.0'
+use_frameworks!
+
+target 'InteriorDesignQuote' do
+  pod 'Firebase/Firestore'
+  pod 'Firebase/Core'
+end
