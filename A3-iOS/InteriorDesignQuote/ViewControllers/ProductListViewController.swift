@@ -39,7 +39,7 @@ class ProductListViewController: UITableViewController {
                 guard let data = data else { return }
 
                 do {
-                    self.products = try JSONDecoder().decode([Product].self, from: data)
+                    self.products = try Product.decodeList(from: data)
                     self.computeCompatibility()
                     self.tableView.reloadData()
                 } catch {

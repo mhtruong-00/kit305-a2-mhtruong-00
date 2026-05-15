@@ -32,17 +32,17 @@ struct FloorSpace {
     }
 
     init?(id: String, data: [String: Any]) {
-        guard let name = data["name"] as? String,
-              let roomId = data["roomId"] as? String else { return nil }
+        guard let name = FirestoreValue.requiredString(data, key: "name"),
+              let roomId = FirestoreValue.requiredString(data, key: "roomId") else { return nil }
         self.id = id
         self.name = name
         self.roomId = roomId
-        self.widthMm = data["widthMm"] as? Double
-        self.depthMm = data["depthMm"] as? Double
-        self.selectedProductId = data["selectedProductId"] as? String
-        self.selectedProductName = data["selectedProductName"] as? String
-        self.selectedProductVariant = data["selectedProductVariant"] as? String
-        self.photoBase64 = data["photoBase64"] as? String
+        self.widthMm = FirestoreValue.double(data, key: "widthMm")
+        self.depthMm = FirestoreValue.double(data, key: "depthMm")
+        self.selectedProductId = FirestoreValue.optionalString(data, key: "selectedProductId")
+        self.selectedProductName = FirestoreValue.optionalString(data, key: "selectedProductName")
+        self.selectedProductVariant = FirestoreValue.optionalString(data, key: "selectedProductVariant")
+        self.photoBase64 = FirestoreValue.optionalString(data, key: "photoBase64")
     }
 
     func toFirestore() -> [String: Any] {

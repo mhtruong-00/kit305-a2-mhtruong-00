@@ -28,6 +28,8 @@ class QuoteViewController: UIViewController {
     private var quoteRooms: [QuoteRoom] = []
     private var discountPercent: Double = 0.0
     private let labourPerRoom: Double = 200.0
+    private let defaultWindowRate: Double = 50.0
+    private let defaultFloorRate: Double = 100.0
 
     // MARK: - UI
 
@@ -156,7 +158,7 @@ class QuoteViewController: UIViewController {
 
     // MARK: - Data Loading
 
-    private var productCache: [String: Double] = [:]  // productId -> pricePerSqm
+    private var productCache: [String: Double] = [:]
 
     // Tag encoding for UISwitch controls: tag = roomIndex * tagRoomMultiplier + offset
     //   Room:   offset = 0                (recovered via tag / tagRoomMultiplier)
@@ -180,7 +182,7 @@ class QuoteViewController: UIViewController {
             guard let url = APIConfig.productURL(category: category) else { outerGroup.leave(); continue }
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
                 if let data = data,
-                   let products = try? JSONDecoder().decode([Product].self, from: data) {
+                   let products = try? Product.decodeList(from: data) {
                     DispatchQueue.main.async {
                         for p in products { self?.productCache[p.id] = p.pricePerSqm }
                         outerGroup.leave()
@@ -251,19 +253,42 @@ class QuoteViewController: UIViewController {
     // MARK: - Cost Calculation (uses productCache populated by loadData)
 
     private func windowCost(_ w: WindowItem) -> Double {
-        guard let width = w.widthMm, let height = w.heightMm,
-              let productId = w.selectedProductId, !productId.isEmpty else { return 0 }
-        let pricePerSqm = productCache[productId] ?? 0
-        let areaSqm = (width * height) / 1_000_000.0
-        return areaSqm * pricePerSqm * Double(w.panelCount)
+        guard let areaSqm = areaSqm(widthMm: w.widthMm, heightMm: w.heightMm) else { return 0 }
+        let pricePerSqm = resolveRate(productId: w.selectedProductId, defaultRate: defaultWindowRate)
+        return areaSqm * pricePerSqm * Double(max(1, w.panelCount))
     }
 
     private func floorCost(_ f: FloorSpace) -> Double {
-        guard let width = f.widthMm, let depth = f.depthMm,
-              let productId = f.selectedProductId, !productId.isEmpty else { return 0 }
-        let pricePerSqm = productCache[productId] ?? 0
-        let areaSqm = (width * depth) / 1_000_000.0
+        guard let areaSqm = areaSqm(widthMm: f.widthMm, heightMm: f.depthMm) else { return 0 }
+        let pricePerSqm = resolveRate(productId: f.selectedProductId, defaultRate: defaultFloorRate)
         return areaSqm * pricePerSqm
+    }
+
+    private func resolveRate(productId: String?, defaultRate: Double) -> Double {
+        guard let productId, !productId.isEmpty else { return defaultRate }
+        return productCache[productId] ?? defaultRate
+    }
+
+    private func areaSqm(widthMm: Double?, heightMm: Double?) -> Double? {
+        guard let widthMm, let heightMm, widthMm > 0, heightMm > 0 else { return nil }
+        return (widthMm * heightMm) / 1_000_000.0
+    }
+
+    private func roomLabour(for room: QuoteRoom) -> Double {
+        let hasMeasuredIncludedItem =
+            room.windows.contains { $0.included && areaSqm(widthMm: $0.item.widthMm, heightMm: $0.item.heightMm) != nil } ||
+            room.floors.contains { $0.included && areaSqm(widthMm: $0.item.widthMm, heightMm: $0.item.depthMm) != nil }
+        return hasMeasuredIncludedItem ? labourPerRoom : 0
+    }
+
+    private func formatMoney(_ value: Double) -> String {
+        String(format: "%.2f", value)
+    }
+
+    private func productDisplayName(name: String?, fallback: String, variant: String?) -> String {
+        let baseName = (name?.isEmpty == false ? name! : fallback)
+        guard let variant, !variant.isEmpty else { return baseName }
+        return "\(baseName) – \(variant)"
     }
 
     // MARK: - UI Building
@@ -368,7 +393,7 @@ class QuoteViewController: UIViewController {
         var labourTotal: Double = 0
 
         for qr in quoteRooms where qr.included {
-            labourTotal += labourPerRoom
+            labourTotal += roomLabour(for: qr)
             for qw in qr.windows where qw.included {
                 itemSubtotal += windowCost(qw.item)
             }
@@ -420,17 +445,18 @@ class QuoteViewController: UIViewController {
 
         for qr in quoteRooms where qr.included {
             lines.append("Room: \(qr.room.name)")
-            labourTotal += labourPerRoom
+            labourTotal += roomLabour(for: qr)
             for qw in qr.windows where qw.included {
                 let cost = windowCost(qw.item)
-                lines.append("  Window - \(qw.item.name): $\(String(format: "%.2f", cost))")
+                lines.append("  Window - \(qw.item.name): $\(formatMoney(cost))")
                 itemSubtotal += cost
             }
             for qf in qr.floors where qf.included {
                 let cost = floorCost(qf.item)
-                lines.append("  Floor - \(qf.item.name): $\(String(format: "%.2f", cost))")
+                lines.append("  Floor - \(qf.item.name): $\(formatMoney(cost))")
                 itemSubtotal += cost
             }
+            lines.append("  Labour: $\(formatMoney(roomLabour(for: qr)))")
             lines.append("")
         }
 
@@ -447,17 +473,34 @@ class QuoteViewController: UIViewController {
     }
 
     private func buildCSV() -> String {
-        var rows: [String] = ["Room,Type,Item,Cost"]
+        var rows: [String] = ["Room,Type,Item,Product,RatePerSqm,AreaSqm,Cost,Included"]
+        var itemSubtotal: Double = 0
+        var labourTotal: Double = 0
+
         for qr in quoteRooms where qr.included {
             for qw in qr.windows where qw.included {
                 let cost = windowCost(qw.item)
-                rows.append("\"\(qr.room.name)\",Window,\"\(qw.item.name)\",\(String(format: "%.2f", cost))")
+                let rate = resolveRate(productId: qw.item.selectedProductId, defaultRate: defaultWindowRate)
+                let area = areaSqm(widthMm: qw.item.widthMm, heightMm: qw.item.heightMm) ?? 0
+                rows.append("\"\(qr.room.name)\",Window,\"\(qw.item.name)\",\"\(productDisplayName(name: qw.item.selectedProductName, fallback: "Basic Window", variant: qw.item.selectedProductVariant))\",\(formatMoney(rate)),\(formatMoney(area)),\(formatMoney(cost)),true")
+                itemSubtotal += cost
             }
             for qf in qr.floors where qf.included {
                 let cost = floorCost(qf.item)
-                rows.append("\"\(qr.room.name)\",Floor,\"\(qf.item.name)\",\(String(format: "%.2f", cost))")
+                let rate = resolveRate(productId: qf.item.selectedProductId, defaultRate: defaultFloorRate)
+                let area = areaSqm(widthMm: qf.item.widthMm, heightMm: qf.item.depthMm) ?? 0
+                rows.append("\"\(qr.room.name)\",Floor,\"\(qf.item.name)\",\"\(productDisplayName(name: qf.item.selectedProductName, fallback: "Basic Floor", variant: qf.item.selectedProductVariant))\",\(formatMoney(rate)),\(formatMoney(area)),\(formatMoney(cost)),true")
+                itemSubtotal += cost
             }
+            labourTotal += roomLabour(for: qr)
         }
+        let subtotal = itemSubtotal + labourTotal
+        let discountAmount = subtotal * discountPercent / 100.0
+        let finalTotal = subtotal - discountAmount
+        rows.append("Summary,Items Subtotal,,, ,,\(formatMoney(itemSubtotal)),")
+        rows.append("Summary,Labour,,, ,,\(formatMoney(labourTotal)),")
+        rows.append("Summary,Discount \(String(format: "%.1f", discountPercent))%,,, ,,\(formatMoney(discountAmount)),")
+        rows.append("Summary,Final Total,,, ,,\(formatMoney(finalTotal)),")
         return rows.joined(separator: "\n")
     }
 

@@ -14,12 +14,12 @@ struct Room {
     }
 
     init?(id: String, data: [String: Any]) {
-        guard let name = data["name"] as? String,
-              let houseId = data["houseId"] as? String else { return nil }
+        guard let name = FirestoreValue.requiredString(data, key: "name"),
+              let houseId = FirestoreValue.requiredString(data, key: "houseId") else { return nil }
         self.id = id
         self.name = name
         self.houseId = houseId
-        self.photoBase64 = data["photoBase64"] as? String
+        self.photoBase64 = FirestoreValue.optionalString(data, key: "photoBase64")
     }
 
     func toFirestore() -> [String: Any] {

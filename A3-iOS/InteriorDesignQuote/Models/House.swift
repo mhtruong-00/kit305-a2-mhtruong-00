@@ -13,8 +13,8 @@ struct House {
     }
 
     init?(id: String, data: [String: Any]) {
-        guard let customerName = data["customerName"] as? String,
-              let address = data["address"] as? String else { return nil }
+        guard let customerName = FirestoreValue.requiredString(data, key: "customerName"),
+              let address = FirestoreValue.requiredString(data, key: "address") else { return nil }
         self.id = id
         self.customerName = customerName
         self.address = address
